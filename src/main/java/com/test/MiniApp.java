@@ -17,12 +17,38 @@ public class MiniApp {
     // BLOCKER: Hardcoded absolute file path
     private static final String CONFIG_FILE_PATH = "/opt/app/config/app.properties";
     private static final String LOG_FILE_PATH = "/var/log/mini-app.log";
-    
+
+    /**
+     * Adds two integers and returns the sum.
+     * Includes overflow validation to detect integer overflow conditions.
+     *
+     * @param a first integer operand
+     * @param b second integer operand
+     * @return sum of a and b
+     * @throws ArithmeticException if integer overflow is detected
+     */
+    public static int add(int a, int b) {
+        int sum = a + b;
+
+        // Overflow detection: if both operands have the same sign,
+        // the result must have the same sign as well
+        if (((a ^ sum) & (b ^ sum)) < 0) {
+            throw new ArithmeticException("Integer overflow detected: " + a + " + " + b);
+        }
+
+        return sum;
+    }
+
     public static void main(String[] args) {
         System.out.println("Starting Mini Java Application...");
         
         MiniApp app = new MiniApp();
         app.initializeApplication();
+
+        // Demonstrate addition operation
+        int result = add(5, 10);
+        System.out.println("Addition operation result: 5 + 10 = " + result);
+
         app.startServer();
     }
     
