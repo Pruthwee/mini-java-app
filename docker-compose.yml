@@ -1,0 +1,21 @@
+version: '3.8'
+services:
+  mini-java-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mini-java-app:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - DATABASE_URL=${DATABASE_URL:-jdbc:mysql://db-host:3306/mini_app_db}
+      - DATABASE_USERNAME=${DATABASE_USERNAME:-root}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-password}
+      - CACHE_REDIS_HOST=${CACHE_REDIS_HOST:-redis-host}
+      - CACHE_REDIS_PORT=${CACHE_REDIS_PORT:-6379}
+      - EXTERNAL_API_BASE_URL=${EXTERNAL_API_BASE_URL:-http://api.example.com/v1}
+      - MESSAGING_RABBITMQ_HOST=${MESSAGING_RABBITMQ_HOST:-rabbitmq-host}
+    volumes:
+      - ./config:/app/config
+      - ./logs:/var/log/mini-app

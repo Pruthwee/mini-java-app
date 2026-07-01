@@ -11,20 +11,20 @@ import java.sql.SQLException;
 public class DatabaseService {
     
     // BLOCKER: Hardcoded database connection details
-    private static final String DB_HOST = "localhost";
-    private static final String DB_PORT = "3306";
+    private static final String DB_HOST = System.getenv().getOrDefault("DB_HOST", "localhost");
+    private static final String DB_PORT = System.getenv().getOrDefault("DB_PORT", "3306");
     private static final String DB_NAME = "mini_app_db";
     private static final String DB_URL = "jdbc:mysql://" + DB_HOST + ":" + DB_PORT + "/" + DB_NAME;
     private static final String DB_USERNAME = "root";
     private static final String DB_PASSWORD = "password123";
     
     // BLOCKER: Hardcoded cache server details
-    private static final String REDIS_HOST = "127.0.0.1";
-    private static final int REDIS_PORT = 6379;
+    private static final String REDIS_HOST = System.getenv().getOrDefault("REDIS_HOST", "127.0.0.1");
+    private static final int REDIS_PORT = Integer.parseInt(System.getenv().getOrDefault("REDIS_PORT", "6379"));
     
     // BLOCKER: Hardcoded API endpoints
-    private static final String EXTERNAL_API_URL = "http://api.example.com:8080/v1";
-    private static final String PAYMENT_SERVICE_URL = "https://payment.internal.company.com/process";
+    private static final String EXTERNAL_API_URL = System.getenv().getOrDefault("EXTERNAL_API_URL", "http://api.example.com:8080/v1");
+    private static final String PAYMENT_SERVICE_URL = System.getenv().getOrDefault("PAYMENT_SERVICE_URL", "https://payment.internal.company.com/process");
     
     private Connection connection;
     
