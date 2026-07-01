@@ -4,47 +4,38 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.Optional;
 
-/**
- * Database service with hardcoded connection details - intentional containerization blockers
- */
 public class DatabaseService {
-    
-    // BLOCKER: Hardcoded database connection details
-    private static final String DB_HOST = "localhost";
-    private static final String DB_PORT = "3306";
-    private static final String DB_NAME = "mini_app_db";
-    private static final String DB_URL = "jdbc:mysql://" + DB_HOST + ":" + DB_PORT + "/" + DB_NAME;
-    private static final String DB_USERNAME = "root";
-    private static final String DB_PASSWORD = "password123";
-    
-    // BLOCKER: Hardcoded cache server details
-    private static final String REDIS_HOST = "127.0.0.1";
-    private static final int REDIS_PORT = 6379;
-    
-    // BLOCKER: Hardcoded API endpoints
-    private static final String EXTERNAL_API_URL = "http://api.example.com:8080/v1";
-    private static final String PAYMENT_SERVICE_URL = "https://payment.internal.company.com/process";
-    
     private Connection connection;
-    
-    public void connect() {
+    private final String dbUrl;
+    private final String dbUsername;
+    private final String dbPassword;
+    private final String redisHost;
+    private final int redisPort;
+    private final String externalApiUrl;
+    private final String paymentServiceUrl;
+
+    public DatabaseService() {
+        this.dbUrl = Optional.ofNullable(System.getenv("DB_URL")).orElse("jdbc:mysql://localhost:3306/mini_app_db");
+        this.dbUsername = Optional.ofNullable(System.getenv("DB_USERNAME")).orElse("root");
+        this.dbPassword = Optional.ofNullable(System.getenv("DB_PASSWORD")).orElse("password123");
+        this.redisHost = Optional.ofNullable(System.getenv("REDIS_HOST")).orElse("127.0.0.1");
+        this.redisPort = Integer.parseInt(Optional.ofNullable(System.getenv("REDIS_PORT")).orElse("6379"));
+        this.externalApiUrl = Optional.ofNullable(System.getenv("EXTERNAL_API_URL")).orElse("http://api.example.com:8080/v1");
+        this.paymentServiceUrl = Optional.ofNullable(System.getenv("PAYMENT_SERVICE_URL")).orElse("https://payment.internal.company.com/process");
+        
+        initializeConnection();
+    }
+
+    private void initializeConnection() {
         try {
-            System.out.println("Connecting to database...");
-            
-            // BLOCKER: Hardcoded JDBC driver
             Class.forName("com.mysql.cj.jdbc.Driver");
+            connection = DriverManager.getConnection(dbUrl, dbUsername, dbPassword);
+            System.out.println("Connected to database: " + dbUrl);
+            System.out.println("Using username: " + dbUsername);
             
-            // BLOCKER: Hardcoded connection string and credentials
-            connection = DriverManager.getConnection(DB_URL, DB_USERNAME, DB_PASSWORD);
-            
-            System.out.println("Connected to database: " + DB_URL);
-            System.out.println("Using username: " + DB_USERNAME);
-            
-            // BLOCKER: Hardcoded cache connection
             connectToCache();
-            
-            // BLOCKER: Hardcoded external service URLs
             initializeExternalServices();
             
         } catch (ClassNotFoundException e) {
@@ -53,24 +44,20 @@ public class DatabaseService {
             System.err.println("Database connection failed: " + e.getMessage());
         }
     }
-    
+
     private void connectToCache() {
-        // BLOCKER: Hardcoded Redis connection details
-        System.out.println("Connecting to Redis cache at: " + REDIS_HOST + ":" + REDIS_PORT);
-        // Simulate cache connection
+        System.out.println("Connecting to Redis cache at: " + redisHost + ":" + redisPort);
     }
-    
+
     private void initializeExternalServices() {
-        // BLOCKER: Hardcoded external service URLs
-        System.out.println("Initializing external API: " + EXTERNAL_API_URL);
-        System.out.println("Initializing payment service: " + PAYMENT_SERVICE_URL);
+        System.out.println("Initializing external API: " + externalApiUrl);
+        System.out.println("Initializing payment service: " + paymentServiceUrl);
     }
     
     public void executeQuery(String sql) {
         try {
             if (connection != null && !connection.isClosed()) {
                 PreparedStatement stmt = connection.prepareStatement(sql);
-                // BLOCKER: Hardcoded query timeout
                 stmt.setQueryTimeout(30);
                 
                 System.out.println("Executing query: " + sql);
