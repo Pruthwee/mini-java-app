@@ -1,7 +1,5 @@
 package com.test;
 
-import org.springframework.stereotype.Service;
-
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -9,9 +7,7 @@ import java.sql.SQLException;
 
 /**
  * Database service with hardcoded connection details - intentional containerization blockers
- * Updated to use Spring Service annotation
  */
-@Service
 public class DatabaseService {
     
     // BLOCKER: Hardcoded database connection details
@@ -71,13 +67,13 @@ public class DatabaseService {
     public void executeQuery(String sql) {
         try {
             if (connection != null && !connection.isClosed()) {
-                try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-                    // BLOCKER: Hardcoded query timeout
-                    stmt.setQueryTimeout(30);
-                    
-                    System.out.println("Executing query: " + sql);
-                    stmt.execute();
-                }
+                PreparedStatement stmt = connection.prepareStatement(sql);
+                // BLOCKER: Hardcoded query timeout
+                stmt.setQueryTimeout(30);
+                
+                System.out.println("Executing query: " + sql);
+                stmt.execute();
+                stmt.close();
             }
         } catch (SQLException e) {
             System.err.println("Query execution failed: " + e.getMessage());
