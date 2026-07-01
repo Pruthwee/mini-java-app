@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  mini-java-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mini-java-app:latest
+    container_name: mini-java-app
+    ports:
+      - "8080:8080"
+    environment:
+      # Server configuration
+      - SERVER_PORT=8080
+      - SERVER_HOST=0.0.0.0
+      
+      # Database configuration (external service)
+      - DATABASE_URL=jdbc:mysql://your-database-host:3306/mini_app_db
+      - DB_USERNAME=your_db_user
+      - DB_PASSWORD=your_db_password
+      - DB_POOL_MAX_CONNECTIONS=20
+      - DB_POOL_TIMEOUT=5000
+      
+      # Redis cache configuration (external service)
+      - REDIS_HOST=your-redis-host
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=your_redis_password
+      - REDIS_DATABASE=0
+      
+      # External API configuration
+      - EXTERNAL_API_URL=http://api.example.com:8080/v1
+      - EXTERNAL_API_TIMEOUT=30000
+      - EXTERNAL_API_KEY=your_api_key
+      
+      # Payment service configuration
+      - PAYMENT_SERVICE_URL=https://payment.internal.company.com/process
+      - PAYMENT_SERVICE_USERNAME=your_payment_username
+      - PAYMENT_SERVICE_PASSWORD=your_payment_password
+      
+      # S3 configuration
+      - CONFIG_S3_BUCKET=app-config-bucket
+      - CONFIG_S3_KEY=config/app.properties
+      - LOG_S3_BUCKET=app-logs-bucket
+      - LOG_S3_KEY=logs/mini-app.log
+      - UPLOAD_S3_BUCKET=app-uploads-bucket
+      
+      # Security configuration
+      - JWT_SECRET=your_jwt_secret
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=your_admin_password
+      - ENCRYPTION_KEY=your_encryption_key
+      
+      # Monitoring configuration
+      - MONITORING_ENDPOINT=http://monitoring-service:9090/metrics
+      - MONITORING_USERNAME=monitoring_user
+      - MONITORING_PASSWORD=monitoring_password
+      
+      # RabbitMQ configuration (external service)
+      - RABBITMQ_HOST=your-rabbitmq-host
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USERNAME=your_rabbitmq_user
+      - RABBITMQ_PASSWORD=your_rabbitmq_password
+      
+      # Application configuration
+      - ENVIRONMENT=production
+      - DEBUG_ENABLED=false
+      - LOGGING_LEVEL=INFO
+      
+      # Spring Boot configuration
+      - SPRING_PROFILES_ACTIVE=docker
+    networks:
+      - app-network
+    restart: unless-stopped
+
+networks:
+  app-network:
+    driver: bridge

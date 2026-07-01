@@ -1,0 +1,155 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mini-java-app
+  namespace: mini-java-app
+  labels:
+    app: mini-java-app
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mini-java-app
+  template:
+    metadata:
+      labels:
+        app: mini-java-app
+        version: v1
+    spec:
+      containers:
+      - name: mini-java-app
+        image: {{IMAGE_URI}}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        env:
+        # Server configuration
+        - name: SERVER_PORT
+          value: "8080"
+        - name: SERVER_HOST
+          value: "0.0.0.0"
+        
+        # Database configuration (external service)
+        - name: DATABASE_URL
+          value: "{{DATABASE_URL}}"
+        - name: DB_USERNAME
+          value: "{{DB_USERNAME}}"
+        - name: DB_PASSWORD
+          value: "{{DB_PASSWORD}}"
+        - name: DB_POOL_MAX_CONNECTIONS
+          value: "20"
+        - name: DB_POOL_TIMEOUT
+          value: "5000"
+        
+        # Redis cache configuration (external service)
+        - name: REDIS_HOST
+          value: "{{REDIS_HOST}}"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: REDIS_PASSWORD
+          value: "{{REDIS_PASSWORD}}"
+        - name: REDIS_DATABASE
+          value: "0"
+        
+        # External API configuration
+        - name: EXTERNAL_API_URL
+          value: "{{EXTERNAL_API_URL}}"
+        - name: EXTERNAL_API_TIMEOUT
+          value: "30000"
+        - name: EXTERNAL_API_KEY
+          value: "{{EXTERNAL_API_KEY}}"
+        
+        # Payment service configuration
+        - name: PAYMENT_SERVICE_URL
+          value: "{{PAYMENT_SERVICE_URL}}"
+        - name: PAYMENT_SERVICE_USERNAME
+          value: "{{PAYMENT_SERVICE_USERNAME}}"
+        - name: PAYMENT_SERVICE_PASSWORD
+          value: "{{PAYMENT_SERVICE_PASSWORD}}"
+        
+        # S3 configuration
+        - name: CONFIG_S3_BUCKET
+          value: "{{CONFIG_S3_BUCKET}}"
+        - name: CONFIG_S3_KEY
+          value: "config/app.properties"
+        - name: LOG_S3_BUCKET
+          value: "{{LOG_S3_BUCKET}}"
+        - name: LOG_S3_KEY
+          value: "logs/mini-app.log"
+        - name: UPLOAD_S3_BUCKET
+          value: "{{UPLOAD_S3_BUCKET}}"
+        
+        # Security configuration
+        - name: JWT_SECRET
+          value: "{{JWT_SECRET}}"
+        - name: ADMIN_USERNAME
+          value: "{{ADMIN_USERNAME}}"
+        - name: ADMIN_PASSWORD
+          value: "{{ADMIN_PASSWORD}}"
+        - name: ENCRYPTION_KEY
+          value: "{{ENCRYPTION_KEY}}"
+        
+        # Monitoring configuration
+        - name: MONITORING_ENDPOINT
+          value: "{{MONITORING_ENDPOINT}}"
+        - name: MONITORING_USERNAME
+          value: "{{MONITORING_USERNAME}}"
+        - name: MONITORING_PASSWORD
+          value: "{{MONITORING_PASSWORD}}"
+        
+        # RabbitMQ configuration (external service)
+        - name: RABBITMQ_HOST
+          value: "{{RABBITMQ_HOST}}"
+        - name: RABBITMQ_PORT
+          value: "5672"
+        - name: RABBITMQ_USERNAME
+          value: "{{RABBITMQ_USERNAME}}"
+        - name: RABBITMQ_PASSWORD
+          value: "{{RABBITMQ_PASSWORD}}"
+        
+        # Application configuration
+        - name: ENVIRONMENT
+          value: "production"
+        - name: DEBUG_ENABLED
+          value: "false"
+        - name: LOGGING_LEVEL
+          value: "INFO"
+        
+        # Spring Boot configuration
+        - name: SPRING_PROFILES_ACTIVE
+          value: "docker"
+        
+        # JVM configuration
+        - name: JAVA_OPTS
+          value: "-Xmx512m -Xms256m -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+        
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "512Mi"
+          limits:
+            cpu: "500m"
+            memory: "1Gi"
+        
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      
+      restartPolicy: Always

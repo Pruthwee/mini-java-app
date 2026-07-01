@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mini-java-app
+  labels:
+    name: mini-java-app
+    environment: production
+    app: mini-java-app
