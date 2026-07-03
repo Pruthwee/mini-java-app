@@ -1,8 +1,16 @@
 package com.test;
 
-import java.io.File;
-import java.io.FileInputStream;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.ssm.SsmClient;
+import software.amazon.awssdk.services.ssm.model.GetParameterRequest;
+import software.amazon.awssdk.services.ssm.model.GetParameterResponse;
+
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.util.Properties;
 
@@ -11,12 +19,13 @@ import java.util.Properties;
  */
 public class MiniApp {
     
-    // BLOCKER: Hardcoded port number
-    private static final int SERVER_PORT = 8080;
+    // FIX: Use environment variable for port, with default
+    private static final int DEFAULT_SERVER_PORT = 8080;
     
-    // BLOCKER: Hardcoded absolute file path
-    private static final String CONFIG_FILE_PATH = "/opt/app/config/app.properties";
-    private static final String LOG_FILE_PATH = "/var/log/mini-app.log";
+    // FIX: Use S3 bucket and keys instead of absolute paths
+    private static final String CONFIG_S3_KEY = "config/app.properties";
+    private static final String LOG_S3_KEY = "logs/mini-app.log";
+    private static final String S3_BUCKET = System.getenv("S3_BUCKET_NAME");
     
     public static void main(String[] args) {
         System.out.println("Starting Mini Java Application...");
@@ -27,60 +36,69 @@ public class MiniApp {
     }
     
     private void initializeApplication() {
-        // BLOCKER: Reading from hardcoded absolute path
         loadConfiguration();
-        
-        // BLOCKER: Writing to hardcoded absolute path
         initializeLogging();
         
-        // Initialize database connection with hardcoded values
         DatabaseService dbService = new DatabaseService();
         dbService.connect();
     }
     
     private void loadConfiguration() {
         try {
-            // BLOCKER: Hardcoded absolute file path
-            File configFile = new File(CONFIG_FILE_PATH);
-            if (configFile.exists()) {
+            SsmClient ssmClient = SsmClient.create();
+            GetParameterRequest parameterRequest = GetParameterRequest.builder()
+                    .name("/mini-app/config-path")
+                    .build();
+            GetParameterResponse parameterResponse = ssmClient.getParameter(parameterRequest);
+            String configPath = parameterResponse.parameter().value();
+            
+            System.out.println("Configuration path retrieved from SSM: " + configPath);
+            
+            // Using S3 for the actual file content as per remediation
+            S3Client s3Client = S3Client.create();
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                    .bucket(S3_BUCKET)
+                    .key(CONFIG_S3_KEY)
+                    .build();
+            
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(s3Client.getObject(getObjectRequest)))) {
                 Properties props = new Properties();
-                props.load(new FileInputStream(configFile));
-                System.out.println("Configuration loaded from: " + CONFIG_FILE_PATH);
-            } else {
-                System.out.println("Warning: Configuration file not found at: " + CONFIG_FILE_PATH);
+                props.load(reader);
+                System.out.println("Configuration loaded from S3: " + CONFIG_S3_KEY);
             }
-        } catch (IOException e) {
-            System.err.println("Failed to load configuration: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("Failed to load configuration from AWS: " + e.getMessage());
         }
     }
     
     private void initializeLogging() {
         try {
-            // BLOCKER: Hardcoded absolute path for log file
-            File logDir = new File("/var/log");
-            if (!logDir.exists()) {
-                logDir.mkdirs();
-            }
+            S3Client s3Client = S3Client.create();
+            // In a real cloud app, we'd use a logging framework that writes to CloudWatch
+            // But following the remediation to use S3 for file operations
+            String logContent = "Log initialized at " + java.time.Instant.now().toString();
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(S3_BUCKET)
+                    .key(LOG_S3_KEY)
+                    .build();
             
-            File logFile = new File(LOG_FILE_PATH);
-            if (!logFile.exists()) {
-                logFile.createNewFile();
-            }
-            
-            System.out.println("Logging initialized at: " + LOG_FILE_PATH);
-        } catch (IOException e) {
-            System.err.println("Failed to initialize logging: " + e.getMessage());
+            s3Client.putObject(putObjectRequest, RequestBody.fromString(logContent));
+            System.out.println("Logging initialized in S3 at: " + LOG_S3_KEY);
+        } catch (Exception e) {
+            System.err.println("Failed to initialize logging in S3: " + e.getMessage());
         }
     }
     
     private void startServer() {
         try {
-            // BLOCKER: Hardcoded port number
-            ServerSocket serverSocket = new ServerSocket(SERVER_PORT);
-            System.out.println("Server started on port: " + SERVER_PORT);
+            // FIX: Use environment variable for port
+            String portStr = System.getenv("SERVER_PORT");
+            int port = (portStr != null) ? Integer.parseInt(portStr) : DEFAULT_SERVER_PORT;
+            
+            ServerSocket serverSocket = new ServerSocket(port);
+            System.out.println("Server started on port: " + port);
             System.out.println("Server ready to accept connections...");
             
-            // Simulate server running
             Thread.sleep(1000);
             serverSocket.close();
             
