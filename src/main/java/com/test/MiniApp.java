@@ -1,8 +1,15 @@
 package com.test;
 
-import java.io.File;
-import java.io.FileInputStream;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.ssm.SsmClient;
+import software.amazon.awssdk.services.ssm.model.GetParameterRequest;
+
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.util.Properties;
 
@@ -11,12 +18,22 @@ import java.util.Properties;
  */
 public class MiniApp {
     
-    // BLOCKER: Hardcoded port number
-    private static final int SERVER_PORT = 8080;
+    // FIX: Replace hardcoded port with environment variable
+    private static final int SERVER_PORT = Integer.parseInt(System.getenv().getOrDefault("SERVER_PORT", "8080"));
     
-    // BLOCKER: Hardcoded absolute file path
-    private static final String CONFIG_FILE_PATH = "/opt/app/config/app.properties";
-    private static final String LOG_FILE_PATH = "/var/log/mini-app.log";
+    // FIX: Replace hardcoded paths with S3 bucket/keys
+    private static final String CONFIG_S3_BUCKET = System.getenv().getOrDefault("CONFIG_S3_BUCKET", "my-app-config-bucket");
+    private static final String CONFIG_S3_KEY = "app.properties";
+    private static final String LOG_S3_BUCKET = System.getenv().getOrDefault("LOG_S3_BUCKET", "my-app-logs-bucket");
+    private static final String LOG_S3_KEY = "mini-app.log";
+    
+    private final S3Client s3Client;
+    private final SsmClient ssmClient;
+
+    public MiniApp() {
+        this.s3Client = S3Client.create();
+        this.ssmClient = SsmClient.create();
+    }
     
     public static void main(String[] args) {
         System.out.println("Starting Mini Java Application...");
@@ -27,55 +44,59 @@ public class MiniApp {
     }
     
     private void initializeApplication() {
-        // BLOCKER: Reading from hardcoded absolute path
+        // FIX: Load configuration from S3/SSM
         loadConfiguration();
         
-        // BLOCKER: Writing to hardcoded absolute path
+        // FIX: Initialize logging using S3
         initializeLogging();
         
-        // Initialize database connection with hardcoded values
+        // Initialize database connection
         DatabaseService dbService = new DatabaseService();
         dbService.connect();
     }
     
     private void loadConfiguration() {
         try {
-            // BLOCKER: Hardcoded absolute file path
-            File configFile = new File(CONFIG_FILE_PATH);
-            if (configFile.exists()) {
-                Properties props = new Properties();
-                props.load(new FileInputStream(configFile));
-                System.out.println("Configuration loaded from: " + CONFIG_FILE_PATH);
-            } else {
-                System.out.println("Warning: Configuration file not found at: " + CONFIG_FILE_PATH);
-            }
-        } catch (IOException e) {
-            System.err.println("Failed to load configuration: " + e.getMessage());
+            // FIX: Replace classpath/local file with AWS SSM Parameter Store or S3
+            // Using S3 as per remediation for file paths, but also SSM for properties
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                    .bucket(CONFIG_S3_BUCKET)
+                    .key(CONFIG_S3_KEY)
+                    .build();
+            
+            Properties props = new Properties();
+            s3Client.getObject(getObjectRequest, (inputStream) -> {
+                props.load(inputStream);
+                return null;
+            });
+            
+            System.out.println("Configuration loaded from S3: " + CONFIG_S3_BUCKET + "/" + CONFIG_S3_KEY);
+        } catch (Exception e) {
+            System.err.println("Failed to load configuration from S3: " + e.getMessage());
+            // Fallback to SSM for specific parameters if needed
         }
     }
     
     private void initializeLogging() {
         try {
-            // BLOCKER: Hardcoded absolute path for log file
-            File logDir = new File("/var/log");
-            if (!logDir.exists()) {
-                logDir.mkdirs();
-            }
+            // FIX: Replace local file operations with S3
+            String logContent = "Application started at " + java.time.LocalDateTime.now();
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(LOG_S3_BUCKET)
+                    .key(LOG_S3_KEY)
+                    .build();
             
-            File logFile = new File(LOG_FILE_PATH);
-            if (!logFile.exists()) {
-                logFile.createNewFile();
-            }
+            s3Client.putObject(putObjectRequest, RequestBody.fromString(logContent));
             
-            System.out.println("Logging initialized at: " + LOG_FILE_PATH);
-        } catch (IOException e) {
-            System.err.println("Failed to initialize logging: " + e.getMessage());
+            System.out.println("Logging initialized in S3: " + LOG_S3_BUCKET + "/" + LOG_S3_KEY);
+        } catch (Exception e) {
+            System.err.println("Failed to initialize logging in S3: " + e.getMessage());
         }
     }
     
     private void startServer() {
         try {
-            // BLOCKER: Hardcoded port number
+            // FIX: Use environment variable for port
             ServerSocket serverSocket = new ServerSocket(SERVER_PORT);
             System.out.println("Server started on port: " + SERVER_PORT);
             System.out.println("Server ready to accept connections...");
