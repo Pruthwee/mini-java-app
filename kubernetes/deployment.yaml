@@ -1,0 +1,147 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mini-java-app
+  namespace: mini-java-app
+  labels:
+    app: mini-java-app
+    version: "1.0.0"
+    managed-by: kubectl
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mini-java-app
+  template:
+    metadata:
+      labels:
+        app: mini-java-app
+        version: "1.0.0"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: mini-java-app
+          image: {{IMAGE_URI}}
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            # Spring profile
+            - name: SPRING_PROFILES_ACTIVE
+              value: "docker"
+
+            # Server configuration
+            - name: SERVER_PORT
+              value: "8080"
+
+            # Database configuration
+            - name: DATABASE_URL
+              value: "{{DATABASE_URL}}"
+            - name: DATABASE_USERNAME
+              value: "{{DATABASE_USERNAME}}"
+            - name: DATABASE_PASSWORD
+              value: "{{DATABASE_PASSWORD}}"
+
+            # Redis / Cache configuration
+            - name: REDIS_HOST
+              value: "{{REDIS_HOST}}"
+            - name: REDIS_PORT
+              value: "{{REDIS_PORT}}"
+            - name: REDIS_PASSWORD
+              value: "{{REDIS_PASSWORD}}"
+
+            # External API configuration
+            - name: EXTERNAL_API_BASE_URL
+              value: "{{EXTERNAL_API_BASE_URL}}"
+            - name: EXTERNAL_API_KEY
+              value: "{{EXTERNAL_API_KEY}}"
+            - name: EXTERNAL_API_TIMEOUT
+              value: "30000"
+
+            # Payment service configuration
+            - name: PAYMENT_SERVICE_URL
+              value: "{{PAYMENT_SERVICE_URL}}"
+            - name: PAYMENT_SERVICE_USERNAME
+              value: "{{PAYMENT_SERVICE_USERNAME}}"
+            - name: PAYMENT_SERVICE_PASSWORD
+              value: "{{PAYMENT_SERVICE_PASSWORD}}"
+
+            # Security configuration
+            - name: SECURITY_JWT_SECRET
+              value: "{{SECURITY_JWT_SECRET}}"
+
+            # Monitoring configuration
+            - name: MONITORING_ENDPOINT
+              value: "{{MONITORING_ENDPOINT}}"
+            - name: MONITORING_USERNAME
+              value: "{{MONITORING_USERNAME}}"
+            - name: MONITORING_PASSWORD
+              value: "{{MONITORING_PASSWORD}}"
+
+            # Messaging / RabbitMQ configuration
+            - name: MESSAGING_RABBITMQ_HOST
+              value: "{{MESSAGING_RABBITMQ_HOST}}"
+            - name: MESSAGING_RABBITMQ_PORT
+              value: "{{MESSAGING_RABBITMQ_PORT}}"
+            - name: MESSAGING_RABBITMQ_USERNAME
+              value: "{{MESSAGING_RABBITMQ_USERNAME}}"
+            - name: MESSAGING_RABBITMQ_PASSWORD
+              value: "{{MESSAGING_RABBITMQ_PASSWORD}}"
+
+            # File paths
+            - name: CONFIG_FILE_PATH
+              value: "/app/config/app.properties"
+            - name: LOG_FILE_PATH
+              value: "/app/logs/mini-app.log"
+
+            # JVM options
+            - name: JAVA_OPTS
+              value: "-Xms256m -Xmx512m -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -Dfile.encoding=UTF-8 -Duser.timezone=UTC"
+
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+            successThreshold: 1
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
+
+          volumeMounts:
+            - name: app-config
+              mountPath: /app/config
+              readOnly: true
+            - name: app-logs
+              mountPath: /app/logs
+
+      volumes:
+        - name: app-config
+          emptyDir: {}
+        - name: app-logs
+          emptyDir: {}
+
+      terminationGracePeriodSeconds: 30

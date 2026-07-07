@@ -1,0 +1,82 @@
+version: "3.9"
+
+services:
+  mini-java-app:
+    image: mini-java-app:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mini-java-app
+    ports:
+      - "8080:8080"
+    environment:
+      # Spring profile
+      SPRING_PROFILES_ACTIVE: docker
+
+      # Server configuration
+      SERVER_PORT: "8080"
+
+      # Database configuration (provide actual values at runtime)
+      DATABASE_URL: "${DATABASE_URL:-jdbc:mysql://db-host:3306/mini_app_db}"
+      DATABASE_USERNAME: "${DATABASE_USERNAME:-root}"
+      DATABASE_PASSWORD: "${DATABASE_PASSWORD:-changeme}"
+
+      # Redis / Cache configuration
+      REDIS_HOST: "${REDIS_HOST:-redis-host}"
+      REDIS_PORT: "${REDIS_PORT:-6379}"
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-}"
+
+      # External API configuration
+      EXTERNAL_API_BASE_URL: "${EXTERNAL_API_BASE_URL:-http://api.example.com:8080/v1}"
+      EXTERNAL_API_KEY: "${EXTERNAL_API_KEY:-}"
+      EXTERNAL_API_TIMEOUT: "${EXTERNAL_API_TIMEOUT:-30000}"
+
+      # Payment service configuration
+      PAYMENT_SERVICE_URL: "${PAYMENT_SERVICE_URL:-https://payment.internal.company.com/process}"
+      PAYMENT_SERVICE_USERNAME: "${PAYMENT_SERVICE_USERNAME:-}"
+      PAYMENT_SERVICE_PASSWORD: "${PAYMENT_SERVICE_PASSWORD:-}"
+
+      # Security configuration
+      SECURITY_JWT_SECRET: "${SECURITY_JWT_SECRET:-changeme}"
+
+      # Monitoring configuration
+      MONITORING_ENDPOINT: "${MONITORING_ENDPOINT:-}"
+      MONITORING_USERNAME: "${MONITORING_USERNAME:-}"
+      MONITORING_PASSWORD: "${MONITORING_PASSWORD:-}"
+
+      # Messaging / RabbitMQ configuration
+      MESSAGING_RABBITMQ_HOST: "${MESSAGING_RABBITMQ_HOST:-rabbitmq-host}"
+      MESSAGING_RABBITMQ_PORT: "${MESSAGING_RABBITMQ_PORT:-5672}"
+      MESSAGING_RABBITMQ_USERNAME: "${MESSAGING_RABBITMQ_USERNAME:-}"
+      MESSAGING_RABBITMQ_PASSWORD: "${MESSAGING_RABBITMQ_PASSWORD:-}"
+
+      # File paths (container-friendly defaults)
+      CONFIG_FILE_PATH: "/app/config/app.properties"
+      LOG_FILE_PATH: "/app/logs/mini-app.log"
+
+      # JVM options
+      JAVA_OPTS: "-Xms256m -Xmx512m -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+
+    volumes:
+      - ./config:/app/config:ro
+      - app-logs:/app/logs
+
+    networks:
+      - app-network
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  app-logs:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge

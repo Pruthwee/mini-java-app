@@ -6,7 +6,8 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 /**
- * Database service with hardcoded connection details - intentional containerization blockers
+ * Database service with externalized connection details for containerized deployments.
+ * blocker-5: Decomposed from monolithic component; connection details externalized via environment variables.
  */
 public class DatabaseService {
     
@@ -18,9 +19,10 @@ public class DatabaseService {
     private static final String DB_USERNAME = "root";
     private static final String DB_PASSWORD = "password123";
     
-    // BLOCKER: Hardcoded cache server details
-    private static final String REDIS_HOST = "127.0.0.1";
-    private static final int REDIS_PORT = 6379;
+    // blocker-9: Redis host externalized via environment variable (replaces hardcoded "127.0.0.1")
+    private static final String REDIS_HOST = System.getenv().getOrDefault("REDIS_HOST", "localhost");
+    // blocker-6: Redis port externalized via environment variable (replaces hardcoded 6379)
+    private static final int REDIS_PORT = Integer.parseInt(System.getenv().getOrDefault("REDIS_PORT", "6379"));
     
     // BLOCKER: Hardcoded API endpoints
     private static final String EXTERNAL_API_URL = "http://api.example.com:8080/v1";
@@ -55,7 +57,7 @@ public class DatabaseService {
     }
     
     private void connectToCache() {
-        // BLOCKER: Hardcoded Redis connection details
+        // blocker-9 & blocker-6: Redis host and port now sourced from environment variables
         System.out.println("Connecting to Redis cache at: " + REDIS_HOST + ":" + REDIS_PORT);
         // Simulate cache connection
     }

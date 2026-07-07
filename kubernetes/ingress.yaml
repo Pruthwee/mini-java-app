@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mini-java-app-ingress
+  namespace: mini-java-app
+  labels:
+    app: mini-java-app
+    managed-by: kubectl
+  annotations:
+    kubernetes.io/ingress.class: azure/application-gateway
+    appgw.ingress.kubernetes.io/ssl-redirect: "false"
+    appgw.ingress.kubernetes.io/request-timeout: "30"
+    appgw.ingress.kubernetes.io/connection-draining: "true"
+    appgw.ingress.kubernetes.io/connection-draining-timeout: "30"
+spec:
+  rules:
+    - host: mini-java-app.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: mini-java-app-service
+                port:
+                  number: 80
