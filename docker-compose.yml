@@ -1,0 +1,28 @@
+version: '3.8'
+services:
+  mbasic:
+    image: mbasic:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - DATABASE_URL=jdbc:mysql://db-host:3306/mini_app_db
+      - DATABASE_USERNAME=root
+      - DATABASE_PASSWORD=password123
+      - CACHE_REDIS_HOST=redis-host
+      - CACHE_REDIS_PORT=6379
+      - CACHE_REDIS_PASSWORD=redis_secret_123
+      - EXTERNAL_API_BASE_URL=http://api.example.com:8080/v1
+      - EXTERNAL_API_KEY=hardcoded_api_key_12345
+      - PAYMENT_SERVICE_URL=https://payment.internal.company.com/process
+      - PAYMENT_SERVICE_USERNAME=payment_user
+      - PAYMENT_SERVICE_PASSWORD=payment_secret_456
+      - SECURITY_JWT_SECRET=my_super_secret_jwt_key_123456789
+      - SECURITY_ADMIN_USERNAME=admin
+      - SECURITY_ADMIN_PASSWORD=admin123
+      - MESSAGING_RABBITMQ_HOST=rabbitmq.internal.company.com
+      - MESSAGING_RABBITMQ_USERNAME=rabbitmq_user
+      - MESSAGING_RABBITMQ_PASSWORD=rabbitmq_secret
+    volumes:
+      - ./config:/app/config
+      - ./logs:/var/log/mini-app
