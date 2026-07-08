@@ -4,6 +4,11 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
+import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRequest;
+import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Database service with hardcoded connection details - intentional containerization blockers
@@ -11,35 +16,52 @@ import java.sql.SQLException;
 public class DatabaseService {
     
     // BLOCKER: Hardcoded database connection details
-    private static final String DB_HOST = "localhost";
-    private static final String DB_PORT = "3306";
-    private static final String DB_NAME = "mini_app_db";
+    private static final String DB_HOST = System.getenv("DB_HOST") != null ? System.getenv("DB_HOST") : "localhost";
+    private static final String DB_PORT = System.getenv("DB_PORT") != null ? System.getenv("DB_PORT") : "3306";
+    private static final String DB_NAME = System.getenv("DB_NAME") != null ? System.getenv("DB_NAME") : "mini_app_db";
     private static final String DB_URL = "jdbc:mysql://" + DB_HOST + ":" + DB_PORT + "/" + DB_NAME;
-    private static final String DB_USERNAME = "root";
-    private static final String DB_PASSWORD = "password123";
+    
+    // Credentials will be fetched from AWS Secrets Manager
+    private String dbUsername;
+    private String dbPassword;
     
     // BLOCKER: Hardcoded cache server details
-    private static final String REDIS_HOST = "127.0.0.1";
-    private static final int REDIS_PORT = 6379;
+    private static final String REDIS_HOST = System.getenv("REDIS_HOST") != null ? System.getenv("REDIS_HOST") : "127.0.0.1";
+    private static final int REDIS_PORT = System.getenv("REDIS_PORT") != null ? Integer.parseInt(System.getenv("REDIS_PORT")) : 6379;
     
     // BLOCKER: Hardcoded API endpoints
-    private static final String EXTERNAL_API_URL = "http://api.example.com:8080/v1";
-    private static final String PAYMENT_SERVICE_URL = "https://payment.internal.company.com/process";
+    private static final String EXTERNAL_API_URL = System.getenv("EXTERNAL_API_URL") != null ? System.getenv("EXTERNAL_API_URL") : "http://api.example.com:8080/v1";
+    private static final String PAYMENT_SERVICE_URL = System.getenv("PAYMENT_SERVICE_URL") != null ? System.getenv("PAYMENT_SERVICE_URL") : "https://payment.internal.company.com/process";
     
     private Connection connection;
+    
+    private void fetchCredentialsFromSecretsManager() {
+        String secretName = System.getenv("DB_SECRET_NAME");
+        if (secretName == null) {
+            this.dbUsername = node.get("username").asText();
+            this.dbPassword = node.get("password").asText();
+        } catch (Exception e) {
+            System.err.println("Error fetching secrets from AWS Secrets Manager: " + e.getMessage());
+            // Fallback or throw exception based on requirements
+            this.dbUsername = "root";
+            this.dbPassword = "password123";
+        }
+    }
     
     public void connect() {
         try {
             System.out.println("Connecting to database...");
             
+            fetchCredentialsFromSecretsManager();
+            
             // BLOCKER: Hardcoded JDBC driver
             Class.forName("com.mysql.cj.jdbc.Driver");
             
             // BLOCKER: Hardcoded connection string and credentials
-            connection = DriverManager.getConnection(DB_URL, DB_USERNAME, DB_PASSWORD);
+            connection = DriverManager.getConnection(DB_URL, dbUsername, dbPassword);
             
             System.out.println("Connected to database: " + DB_URL);
-            System.out.println("Using username: " + DB_USERNAME);
+            System.out.println("Using username: " + dbUsername);
             
             // BLOCKER: Hardcoded cache connection
             connectToCache();
