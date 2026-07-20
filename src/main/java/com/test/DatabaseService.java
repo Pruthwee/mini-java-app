@@ -1,62 +1,72 @@
 package com.test;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
+import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRequest;
 
-/**
- * Database service with hardcoded connection details - intentional containerization blockers
- */
 public class DatabaseService {
     
     // BLOCKER: Hardcoded database connection details
-    private static final String DB_HOST = "localhost";
-    private static final String DB_PORT = "3306";
-    private static final String DB_NAME = "mini_app_db";
-    private static final String DB_URL = "jdbc:mysql://" + DB_HOST + ":" + DB_PORT + "/" + DB_NAME;
-    private static final String DB_USERNAME = "root";
-    private static final String DB_PASSWORD = "password123";
-    
-    // BLOCKER: Hardcoded cache server details
-    private static final String REDIS_HOST = "127.0.0.1";
-    private static final int REDIS_PORT = 6379;
+    private static final String DB_HOST = System.getenv("DB_HOST") != null ? System.getenv("DB_HOST") : "localhost";
+    private String dbUsername;
+    private String dbPassword;
     
     // BLOCKER: Hardcoded API endpoints
-    private static final String EXTERNAL_API_URL = "http://api.example.com:8080/v1";
-    private static final String PAYMENT_SERVICE_URL = "https://payment.internal.company.com/process";
+    private static final String EXTERNAL_API_URL = System.getenv("EXTERNAL_API_URL") != null ? System.getenv("EXTERNAL_API_URL") : "http://api.example.com:8080/v1";
+    private static final String PAYMENT_SERVICE_URL = System.getenv("PAYMENT_SERVICE_URL") != null ? System.getenv("PAYMENT_SERVICE_URL") : "https://payment.internal.company.com/process";
     
-    private Connection connection;
+    private HikariDataSource dataSource;
     
-    public void connect() {
-        try {
-            System.out.println("Connecting to database...");
+            // Retrieve credentials from AWS Secrets Manager with explicit timeouts
+            software.amazon.awssdk.http.apache.ApacheHttpClient.Builder httpClientBuilder = 
+                software.amazon.awssdk.http.apache.ApacheHttpClient.builder();
+            httpClientBuilder.connectionTimeout(java.time.Duration.ofSeconds(10));
+            httpClientBuilder.socketTimeout(java.time.Duration.ofSeconds(10));
+
+            SecretsManagerClient secretsClient = SecretsManagerClient.builder()
+                .httpClient(httpClientBuilder.build())
+                .build();
             
-            // BLOCKER: Hardcoded JDBC driver
-            Class.forName("com.mysql.cj.jdbc.Driver");
+            String secret = secretsClient.getSecretValue(valueRequest).secretString();
+            // Assuming secret is stored as a simple comma-separated string or JSON
+            this.dbUsername = secret.split(",")[0];
+            this.dbPassword = secret.split(",")[1];
+
+            // Use environment variable for DB_URL or construct it
+            String dbUrl = System.getenv("DB_URL") != null ? System.getenv("DB_URL") : "jdbc:mysql://" + DB_HOST + ":3306/mydb";
             
-            // BLOCKER: Hardcoded connection string and credentials
-            connection = DriverManager.getConnection(DB_URL, DB_USERNAME, DB_PASSWORD);
+            // Implement HikariCP connection pooling
+            HikariConfig config = new HikariConfig();
+            config.setJdbcUrl(dbUrl);
+            config.setUsername(this.dbUsername);
+            config.setPassword(this.dbPassword);
             
-            System.out.println("Connected to database: " + DB_URL);
-            System.out.println("Using username: " + DB_USERNAME);
+            // Cloud-native optimizations for RDS Proxy / AWS
+            config.setMaximumPoolSize(10);
+            config.setMinimumIdle(5);
+            config.setIdleTimeout(300000);
+            config.setConnectionTimeout(20000);
+            config.addDataSourceProperty("cachePrepStmts", "true");
+            config.addDataSourceProperty("prepStmtCacheSize", "250");
+            config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+
+            this.dataSource = new HikariDataSource(config);
+            System.out.println("Database connection pool initialized using username: " + this.dbUsername);
             
-            // BLOCKER: Hardcoded cache connection
-            connectToCache();
-            
-            // BLOCKER: Hardcoded external service URLs
-            initializeExternalServices();
-            
-        } catch (ClassNotFoundException e) {
-            System.err.println("Database driver not found: " + e.getMessage());
-        } catch (SQLException e) {
-            System.err.println("Database connection failed: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("Database connection pool initialization failed: " + e.getMessage());
         }
     }
     
     private void connectToCache() {
         // BLOCKER: Hardcoded Redis connection details
-        System.out.println("Connecting to Redis cache at: " + REDIS_HOST + ":" + REDIS_PORT);
+        String redisHost = System.getenv("REDIS_HOST") != null ? System.getenv("REDIS_HOST") : "localhost";
+        String redisPort = System.getenv("REDIS_PORT") != null ? System.getenv("REDIS_PORT") : "6379";
+        System.out.println("Connecting to Redis cache at: " + redisHost + ":" + redisPort);
         // Simulate cache connection
     }
     
@@ -67,11 +77,12 @@ public class DatabaseService {
     }
     
     public void executeQuery(String sql) {
-        try {
-            if (connection != null && !connection.isClosed()) {
+        try (Connection connection = dataSource.getConnection()) {
+            if (connection != null) {
                 PreparedStatement stmt = connection.prepareStatement(sql);
                 // BLOCKER: Hardcoded query timeout
-                stmt.setQueryTimeout(30);
+                int timeout = Integer.parseInt(System.getenv("QUERY_TIMEOUT") != null ? System.getenv("QUERY_TIMEOUT") : "30");
+                stmt.setQueryTimeout(timeout);
                 
                 System.out.println("Executing query: " + sql);
                 stmt.execute();
@@ -84,12 +95,12 @@ public class DatabaseService {
     
     public void disconnect() {
         try {
-            if (connection != null && !connection.isClosed()) {
-                connection.close();
-                System.out.println("Database connection closed");
+            if (dataSource != null && !dataSource.isClosed()) {
+                dataSource.close();
+                System.out.println("Database connection pool closed");
             }
-        } catch (SQLException e) {
-            System.err.println("Failed to close database connection: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("Failed to close database connection pool: " + e.getMessage());
         }
     }
 }
