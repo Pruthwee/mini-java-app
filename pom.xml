@@ -13,7 +13,22 @@
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- AWS SDK v2 BOM version — single place to update -->
+        <aws.sdk.version>2.25.11</aws.sdk.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- AWS SDK for Java v2 BOM — manages all SDK module versions -->
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>${aws.sdk.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <dependency>
@@ -21,7 +36,74 @@
             <artifactId>mysql-connector-java</artifactId>
             <version>8.0.33</version>
         </dependency>
-        
+
+        <!--
+            cr-java-0073 fix: HikariCP connection pooling library replaces raw
+            DriverManager.getConnection calls (DatabaseService.java lines 17, 39).
+            HikariCP manages a pool of connections to Amazon RDS Proxy, providing
+            efficient resource utilisation, health checking, and automatic eviction
+            of stale connections — required for cloud-native database access on AWS.
+            RDS Proxy is configured via the DB_HOST environment variable (set to the
+            RDS Proxy endpoint) and handles connection multiplexing and failover at
+            the infrastructure level.
+        -->
+        <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>5.1.0</version>
+        </dependency>
+
+        <!--
+            cr-java-0063 fix: AWS SDK v2 S3 client replaces all java.io.File-based
+            persistent storage operations (original MiniApp.java lines 44, 60, 62, 65).
+            Version is managed by the AWS SDK BOM above.
+        -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+        </dependency>
+
+        <!--
+            cr-java-0069 fix: AWS SDK v2 Secrets Manager client retrieves database
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>ssm</artifactId>
+        </dependency>
+
+        <!--
+            cr-java-0070 fix: AWS SDK v2 SSM client retrieves application configuration
+            parameters from AWS Systems Manager Parameter Store at runtime, replacing
+            classpath-bundled properties files (original MiniApp.java line 46).
+            GetParametersByPath API loads all parameters under a configurable path prefix
+            (SSM_PARAMETER_PATH env var, default: /mini-app/config), enabling runtime
+            configuration changes without redeployment and environment-specific parameter
+            sets via path prefixes. Version is managed by the AWS SDK BOM above.
+        -->
+        <dependency>
+            <artifactId>secretsmanager</artifactId>
+        </dependency>
+
+        <!-- AWS SDK v2 auth module — provides default credential provider chain -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>auth</artifactId>
+        </dependency>
+
+        <!-- AWS SDK v2 HTTP client (URL connection) — required by S3 and Secrets Manager clients -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>url-connection-client</artifactId>
+        </dependency>
+
+        <!--
+            cr-java-0069 fix: Jackson Databind is used to parse the JSON secret string
+            returned by AWS Secrets Manager into username/password fields.
+        -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.15.2</version>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
