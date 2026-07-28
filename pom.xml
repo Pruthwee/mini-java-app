@@ -27,6 +27,22 @@
             <artifactId>spring-boot-starter-web</artifactId>
             <version>2.7.0</version>
         </dependency>
+
+        <dependency>
+            <groupId>com.azure</groupId>
+            <artifactId>azure-storage-blob</artifactId>
+            <version>12.24.0</version>
+        </dependency>
+
+        <dependency>
+        <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>5.0.1</version>
+        </dependency>
+            <artifactId>azure-identity</artifactId>
+            <version>1.10.0</version>
+        </dependency>
     </dependencies>
 
     <build>

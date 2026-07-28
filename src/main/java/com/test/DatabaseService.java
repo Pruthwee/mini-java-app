@@ -1,76 +1,99 @@
 package com.test;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import com.azure.identity.DefaultAzureCredentialBuilder;
+import com.azure.security.keyvault.secrets.SecretClient;
+import com.azure.security.keyvault.secrets.SecretClientBuilder;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+import javax.sql.DataSource;
 
 /**
- * Database service with hardcoded connection details - intentional containerization blockers
+ * Database service with HikariCP connection pooling for cloud readiness
  */
 public class DatabaseService {
-    
-    // BLOCKER: Hardcoded database connection details
-    private static final String DB_HOST = "localhost";
-    private static final String DB_PORT = "3306";
-    private static final String DB_NAME = "mini_app_db";
+    private static final String DB_HOST = System.getenv("DB_HOST") != null ? System.getenv("DB_HOST") : "localhost";
+    private static final String DB_PORT = System.getenv("DB_PORT") != null ? System.getenv("DB_PORT") : "3306";
+    private static final String DB_NAME = System.getenv("DB_NAME") != null ? System.getenv("DB_NAME") : "mini_app_db";
     private static final String DB_URL = "jdbc:mysql://" + DB_HOST + ":" + DB_PORT + "/" + DB_NAME;
-    private static final String DB_USERNAME = "root";
-    private static final String DB_PASSWORD = "password123";
     
-    // BLOCKER: Hardcoded cache server details
-    private static final String REDIS_HOST = "127.0.0.1";
-    private static final int REDIS_PORT = 6379;
+    private String dbUsername;
+    private String dbPassword;
     
-    // BLOCKER: Hardcoded API endpoints
-    private static final String EXTERNAL_API_URL = "http://api.example.com:8080/v1";
-    private static final String PAYMENT_SERVICE_URL = "https://payment.internal.company.com/process";
+    private static final String REDIS_HOST = System.getenv("REDIS_HOST") != null ? System.getenv("REDIS_HOST") : "127.0.0.1";
+    private static final int REDIS_PORT = System.getenv("REDIS_PORT") != null ? Integer.parseInt(System.getenv("REDIS_PORT") != null ? System.getenv("REDIS_PORT") : "6379") : 6379;
     
-    private Connection connection;
+    private static final String EXTERNAL_API_URL = System.getenv("EXTERNAL_API_URL") != null ? System.getenv("EXTERNAL_API_URL") : "http://api.example.com:8080/v1";
+    private static final String PAYMENT_SERVICE_URL = System.getenv("PAYMENT_SERVICE_URL") != null ? System.getenv("PAYMENT_SERVICE_URL") : "https://payment.internal.company.com/process";
     
-    public void connect() {
+    private HikariDataSource dataSource;
+    
+    private void loadSecretsFromKeyVault() {
         try {
-            System.out.println("Connecting to database...");
-            
-            // BLOCKER: Hardcoded JDBC driver
-            Class.forName("com.mysql.cj.jdbc.Driver");
-            
-            // BLOCKER: Hardcoded connection string and credentials
-            connection = DriverManager.getConnection(DB_URL, DB_USERNAME, DB_PASSWORD);
-            
-            System.out.println("Connected to database: " + DB_URL);
-            System.out.println("Using username: " + DB_USERNAME);
-            
-            // BLOCKER: Hardcoded cache connection
-            connectToCache();
-            
-            // BLOCKER: Hardcoded external service URLs
-            initializeExternalServices();
-            
-        } catch (ClassNotFoundException e) {
-            System.err.println("Database driver not found: " + e.getMessage());
-        } catch (SQLException e) {
-            System.err.println("Database connection failed: " + e.getMessage());
+            String keyVaultUrl = System.getenv("AZURE_KEYVAULT_URL");
+            if (keyVaultUrl == null) {
+                System.err.println("AZURE_KEYVAULT_URL environment variable not set. Falling back to defaults (not recommended for production).");
+                this.dbUsername = System.getenv("DB_USERNAME") != null ? System.getenv("DB_USERNAME") : "root";
+                this.dbPassword = System.getenv("DB_PASSWORD") != null ? System.getenv("DB_PASSWORD") : "password123";
+                return;
+            }
+
+            SecretClient secretClient = new SecretClientBuilder()
+                .vaultUrl(keyVaultUrl)
+                .credential(new DefaultAzureCredentialBuilder().build())
+                .buildClient();
+
+            this.dbUsername = secretClient.getSecret("db-username").getValue();
+            this.dbPassword = secretClient.getSecret("db-password").getValue();
+            System.out.println("Successfully loaded database credentials from Azure Key Vault.");
+        } catch (Exception e) {
+            System.err.println("Failed to load secrets from Azure Key Vault: " + e.getMessage());
+            this.dbUsername = System.getenv("DB_USERNAME") != null ? System.getenv("DB_USERNAME") : "root";
+            this.dbPassword = System.getenv("DB_PASSWORD") != null ? System.getenv("DB_PASSWORD") : "password123";
         }
     }
     
+    public void connect() {
+        try {
+            System.out.println("Connecting to database using HikariCP...");
+            
+            loadSecretsFromKeyVault();
+            
+            HikariConfig config = new HikariConfig();
+            config.setJdbcUrl(DB_URL);
+            config.setUsername(dbUsername);
+            config.setPassword(dbPassword);
+            
+            // Azure SQL / MySQL Cloud optimization settings
+            config.addDataSourceProperty("cachePrepStmts", "true");
+            config.addDataSourceProperty("prepStmtCacheSize", "250");
+            config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+            config.setMaximumPoolSize(10);
+            config.setMinimumIdle(2);
+            config.setConnectionTimeout(30000);
+            config.setIdleTimeout(600000);
+            config.setMaxLifetime(1800000);
+
+            this.dataSource = new HikariDataSource(config);
+            
+            System.out.println("Connected to database: " + DB_URL);
+            System.out.println("Using username: " + dbUsername);
+            
     private void connectToCache() {
-        // BLOCKER: Hardcoded Redis connection details
         System.out.println("Connecting to Redis cache at: " + REDIS_HOST + ":" + REDIS_PORT);
-        // Simulate cache connection
     }
     
     private void initializeExternalServices() {
-        // BLOCKER: Hardcoded external service URLs
         System.out.println("Initializing external API: " + EXTERNAL_API_URL);
         System.out.println("Initializing payment service: " + PAYMENT_SERVICE_URL);
     }
     
     public void executeQuery(String sql) {
-        try {
-            if (connection != null && !connection.isClosed()) {
+        try (Connection connection = dataSource.getConnection()) {
+            if (connection != null) {
                 PreparedStatement stmt = connection.prepareStatement(sql);
-                // BLOCKER: Hardcoded query timeout
                 stmt.setQueryTimeout(30);
                 
                 System.out.println("Executing query: " + sql);
@@ -84,12 +107,12 @@ public class DatabaseService {
     
     public void disconnect() {
         try {
-            if (connection != null && !connection.isClosed()) {
-                connection.close();
-                System.out.println("Database connection closed");
+            if (dataSource != null && !dataSource.isClosed()) {
+                dataSource.close();
+                System.out.println("Database connection pool closed");
             }
-        } catch (SQLException e) {
-            System.err.println("Failed to close database connection: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("Failed to close database connection pool: " + e.getMessage());
         }
     }
 }
