@@ -1,0 +1,74 @@
+version: "3.8"
+
+services:
+  mini-java-app:
+    image: mini-java-app:latest
+    container_name: mini-java-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      # Spring profile
+      SPRING_PROFILES_ACTIVE: docker
+
+      # Server configuration
+      SERVER_PORT: "8080"
+
+      # Database configuration (provide actual values at runtime)
+      DB_HOST: "${DB_HOST:-localhost}"
+      DB_PORT: "${DB_PORT:-3306}"
+      DB_NAME: "${DB_NAME:-mini_app_db}"
+      DB_USERNAME: "${DB_USERNAME:-root}"
+      DB_PASSWORD: "${DB_PASSWORD:-}"
+      DB_URL: "${DB_URL:-}"
+
+      # Redis / Cache configuration
+      REDIS_HOST: "${REDIS_HOST:-redis.internal.svc.cluster.local}"
+      REDIS_PORT: "${REDIS_PORT:-6379}"
+
+      # File-system paths (EFS-backed in EKS; local bind-mounts for dev)
+      APP_CONFIG_DIR: "${APP_CONFIG_DIR:-/mnt/efs/app/config}"
+      APP_LOG_DIR: "${APP_LOG_DIR:-/mnt/efs/logs}"
+      APP_TEMP_DIR: "${APP_TEMP_DIR:-/mnt/efs/tmp/mini-app}"
+      APP_UPLOAD_DIR: "${APP_UPLOAD_DIR:-/mnt/efs/uploads}"
+      APP_CONFIG_FILE_PATH: "${APP_CONFIG_FILE_PATH:-/mnt/efs/app/config/app.properties}"
+      APP_LOG_FILE_PATH: "${APP_LOG_FILE_PATH:-/mnt/efs/logs/mini-app.log}"
+
+      # JVM options
+      JAVA_OPTS: >-
+        -XX:+UseContainerSupport
+        -XX:MaxRAMPercentage=75.0
+        -Xms256m
+        -Xmx512m
+        -Dfile.encoding=UTF-8
+        -Duser.timezone=UTC
+
+    volumes:
+      - app-config:/mnt/efs/app/config
+      - app-logs:/mnt/efs/logs
+      - app-tmp:/mnt/efs/tmp/mini-app
+      - app-uploads:/mnt/efs/uploads
+
+    networks:
+      - app-network
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  app-config:
+  app-logs:
+  app-tmp:
+  app-uploads:
+
+networks:
+  app-network:
+    driver: bridge

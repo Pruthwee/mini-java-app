@@ -1,0 +1,101 @@
+# =============================================================================
+# Helm values.yaml – centralized port configuration for mini-java-app on EKS
+# Rule cz-java-0061 remediation: all port numbers are defined here and
+# referenced consistently across Deployment, Service, Ingress, and health probes.
+# =============================================================================
+
+replicaCount: 1
+
+image:
+  repository: mini-java-app
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+# ---------------------------------------------------------------------------
+# Port configuration (cz-java-0061 fix)
+# All port values are defined once here and propagated to every resource that
+# references them, eliminating hardcoded port numbers in the application code.
+# ---------------------------------------------------------------------------
+ports:
+  # Application HTTP server port (maps to SERVER_PORT env var in the container)
+  server: 8080
+  # Redis cache port (maps to REDIS_PORT env var in the container)
+  redis: 6379
+  # Spring Boot Actuator management port for health probes
+  management: 8081
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: "{{ .Values.ports.server }}"
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: mini-java-app.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+# ---------------------------------------------------------------------------
+# Health probe configuration – references the centralized port values above
+# ---------------------------------------------------------------------------
+livenessProbe:
+  httpGet:
+    path: /actuator/health/liveness
+    port: management
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /actuator/health/readiness
+    port: management
+  initialDelaySeconds: 15
+  periodSeconds: 5
+  failureThreshold: 3
+
+# ---------------------------------------------------------------------------
+# Environment variables injected into the container at runtime
+# These reference the port values defined above so there is a single source
+# of truth for every port used by the application.
+# ---------------------------------------------------------------------------
+env:
+  SERVER_PORT: "{{ .Values.ports.server }}"
+  REDIS_PORT: "{{ .Values.ports.redis }}"
+  MANAGEMENT_PORT: "{{ .Values.ports.management }}"
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

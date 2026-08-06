@@ -1,0 +1,108 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mini-java-app
+  namespace: mini-java-app
+  labels:
+    app: mini-java-app
+    app.kubernetes.io/name: mini-java-app
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/component: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mini-java-app
+  template:
+    metadata:
+      labels:
+        app: mini-java-app
+        app.kubernetes.io/name: mini-java-app
+        app.kubernetes.io/version: "1.0.0"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: mini-java-app
+          image: "{{IMAGE_URI}}"
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            # Spring profile
+            - name: SPRING_PROFILES_ACTIVE
+              value: "docker"
+
+            # Server
+            - name: SERVER_PORT
+              value: "8080"
+
+            # Database
+            - name: DB_HOST
+              value: "{{DB_HOST}}"
+            - name: DB_PORT
+              value: "{{DB_PORT}}"
+            - name: DB_NAME
+              value: "{{DB_NAME}}"
+            - name: DB_USERNAME
+              value: "{{DB_USERNAME}}"
+            - name: DB_PASSWORD
+              value: "{{DB_PASSWORD}}"
+            - name: DB_URL
+              value: "{{DB_URL}}"
+
+            # Redis / Cache
+            - name: REDIS_HOST
+              value: "{{REDIS_HOST}}"
+            - name: REDIS_PORT
+              value: "{{REDIS_PORT}}"
+
+            # File-system paths (EFS-backed PVC mount points)
+            - name: APP_CONFIG_DIR
+              value: "/mnt/efs/app/config"
+            - name: APP_LOG_DIR
+              value: "/mnt/efs/logs"
+            - name: APP_TEMP_DIR
+              value: "/mnt/efs/tmp/mini-java-app"
+            - name: APP_UPLOAD_DIR
+              value: "/mnt/efs/uploads"
+            - name: APP_CONFIG_FILE_PATH
+              value: "/mnt/efs/app/config/app.properties"
+            - name: APP_LOG_FILE_PATH
+              value: "/mnt/efs/logs/mini-app.log"
+
+            # JVM options
+            - name: JAVA_OPTS
+              value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UnlockExperimentalVMOptions -Xms256m -Xmx512m -Dfile.encoding=UTF-8 -Duser.timezone=UTC"
+
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+      terminationGracePeriodSeconds: 30

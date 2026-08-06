@@ -1,0 +1,212 @@
+# Kubernetes NetworkPolicy resources for mini-java-app on EKS
+# Remediation for cz-java-0082 (Individual Components / Service Isolation)
+#
+# These policies enforce explicit, least-privilege communication between
+# decomposed microservices, preventing residual tight coupling through
+# unrestricted network access.
+#
+# Apply with:  kubectl apply -f k8s/network-policy.yaml
+
+---
+# ─────────────────────────────────────────────────────────────────────────────
+# 1. Default-deny all ingress and egress for the mini-java-app namespace.
+#    Every allowed flow must be explicitly permitted by a subsequent policy.
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: mini-java-app
+  labels:
+    app: mini-java-app
+    policy: service-isolation
+    rule: cz-java-0082
+spec:
+  podSelector: {}          # applies to ALL pods in the namespace
+  policyTypes:
+    - Ingress
+    - Egress
+
+---
+# ─────────────────────────────────────────────────────────────────────────────
+# 2. Allow the mini-java-app pod to receive HTTP traffic only from the
+#    ingress controller (or an API gateway) on port 8080.
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-app
+  namespace: mini-java-app
+  labels:
+    app: mini-java-app
+    policy: service-isolation
+    rule: cz-java-0082
+spec:
+  podSelector:
+    matchLabels:
+      app: mini-java-app
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx   # adjust to your ingress namespace
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
+
+---
+# ─────────────────────────────────────────────────────────────────────────────
+# 3. Allow the mini-java-app pod to reach the database service ONLY on the
+#    MySQL port (3306).  The database pod must carry the label
+#    app=mini-java-db in the same namespace (or adjust namespaceSelector).
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-app-to-database
+  namespace: mini-java-app
+  labels:
+    app: mini-java-app
+    policy: service-isolation
+    rule: cz-java-0082
+spec:
+  podSelector:
+    matchLabels:
+      app: mini-java-app
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: mini-java-db
+      ports:
+        - protocol: TCP
+          port: 3306
+
+---
+# ─────────────────────────────────────────────────────────────────────────────
+# 4. Allow the mini-java-app pod to reach the Redis cache service ONLY on
+#    port 6379.  The Redis pod must carry the label app=mini-java-redis.
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-app-to-redis
+  namespace: mini-java-app
+  labels:
+    app: mini-java-app
+    policy: service-isolation
+    rule: cz-java-0082
+spec:
+  podSelector:
+    matchLabels:
+      app: mini-java-app
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: mini-java-redis
+      ports:
+        - protocol: TCP
+          port: 6379
+
+---
+# ─────────────────────────────────────────────────────────────────────────────
+# 5. Allow the mini-java-app pod to reach the Kubernetes DNS service so that
+#    Kubernetes Service DNS names (e.g. mini-java-db.mini-java-app.svc.cluster.local)
+#    resolve correctly.
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: mini-java-app
+  labels:
+    app: mini-java-app
+    policy: service-isolation
+    rule: cz-java-0082
+spec:
+  podSelector:
+    matchLabels:
+      app: mini-java-app
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+---
+# ─────────────────────────────────────────────────────────────────────────────
+# 6. Allow the database pod to receive connections ONLY from the
+#    mini-java-app pod (deny all other ingress to the database).
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-database-ingress-from-app
+  namespace: mini-java-app
+  labels:
+    app: mini-java-db
+    policy: service-isolation
+    rule: cz-java-0082
+spec:
+  podSelector:
+    matchLabels:
+      app: mini-java-db
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: mini-java-app
+      ports:
+        - protocol: TCP
+          port: 3306
+
+---
+# ─────────────────────────────────────────────────────────────────────────────
+# 7. Allow the Redis pod to receive connections ONLY from the
+#    mini-java-app pod (deny all other ingress to Redis).
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-redis-ingress-from-app
+  namespace: mini-java-app
+  labels:
+    app: mini-java-redis
+    policy: service-isolation
+    rule: cz-java-0082
+spec:
+  podSelector:
+    matchLabels:
+      app: mini-java-redis
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: mini-java-app
+      ports:
+        - protocol: TCP
+          port: 6379

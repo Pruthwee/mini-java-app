@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mini-java-app.fullname" . }}
+  labels:
+    {{- include "mini-java-app.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "mini-java-app.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "mini-java-app.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "mini-java-app.serviceAccountName" . }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            # cz-java-0061: Container ports reference Helm values – no hardcoded port numbers
+            - name: http
+              containerPort: {{ .Values.ports.server }}
+              protocol: TCP
+            - name: management
+              containerPort: {{ .Values.ports.management }}
+              protocol: TCP
+          env:
+            # cz-java-0061: Port environment variables sourced from Helm values.yaml
+            - name: SERVER_PORT
+              value: "{{ .Values.ports.server }}"
+            - name: REDIS_PORT
+              value: "{{ .Values.ports.redis }}"
+            - name: MANAGEMENT_PORT
+              value: "{{ .Values.ports.management }}"
+            - name: SPRING_MANAGEMENT_SERVER_PORT
+              value: "{{ .Values.ports.management }}"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: management
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+            failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: management
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+            failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

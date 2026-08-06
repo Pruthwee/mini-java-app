@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mini-java-app.fullname" . }}
+  labels:
+    {{- include "mini-java-app.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    # cz-java-0061: Service port references Helm values – no hardcoded port numbers
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.ports.server }}
+      protocol: TCP
+      name: http
+    - port: {{ .Values.ports.management }}
+      targetPort: {{ .Values.ports.management }}
+      protocol: TCP
+      name: management
+  selector:
+    {{- include "mini-java-app.selectorLabels" . | nindent 4 }}
