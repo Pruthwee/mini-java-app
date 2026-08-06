@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mini-java-app-service
+  namespace: mini-java-app
+  labels:
+    app: mini-java-app
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+      protocol: TCP
+    - name: management
+      port: 8081
+      targetPort: 8081
+      protocol: TCP
+  selector:
+    app: mini-java-app

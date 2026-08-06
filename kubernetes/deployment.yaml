@@ -1,0 +1,186 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mini-java-app
+  namespace: mini-java-app
+  labels:
+    app: mini-java-app
+    version: "1.0.0"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mini-java-app
+  template:
+    metadata:
+      labels:
+        app: mini-java-app
+        version: "1.0.0"
+    spec:
+      containers:
+        - name: mini-java-app
+          image: "{{IMAGE_URI}}"
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: management
+              containerPort: 8081
+              protocol: TCP
+          env:
+            # Spring profile
+            - name: SPRING_PROFILES_ACTIVE
+              value: "docker"
+
+            # Server configuration
+            - name: APP_SERVER_PORT
+              value: "8080"
+            - name: APP_CONTEXT_PATH
+              value: "/mini-app"
+            - name: MANAGEMENT_PORT
+              value: "8081"
+
+            # Logging
+            - name: APP_LOG_LEVEL
+              value: "INFO"
+
+            # Database (non-sensitive — ConfigMap)
+            - name: DB_HOST
+              value: "{{DB_HOST}}"
+            - name: DB_PORT
+              value: "{{DB_PORT}}"
+            - name: DB_NAME
+              value: "{{DB_NAME}}"
+
+            # Database (sensitive — Secret)
+            - name: DB_USERNAME
+              value: "{{DB_USERNAME}}"
+            - name: DB_PASSWORD
+              value: "{{DB_PASSWORD}}"
+
+            # Redis cache (non-sensitive — ConfigMap)
+            - name: REDIS_HOST
+              value: "{{REDIS_HOST}}"
+            - name: REDIS_PORT
+              value: "{{REDIS_PORT}}"
+            - name: REDIS_DATABASE
+              value: "{{REDIS_DATABASE}}"
+
+            # Redis cache (sensitive — Secret)
+            - name: REDIS_PASSWORD
+              value: "{{REDIS_PASSWORD}}"
+
+            # External API (non-sensitive — ConfigMap)
+            - name: EXTERNAL_API_BASE_URL
+              value: "{{EXTERNAL_API_BASE_URL}}"
+            - name: EXTERNAL_API_TIMEOUT
+              value: "{{EXTERNAL_API_TIMEOUT}}"
+
+            # External API (sensitive — Secret)
+            - name: EXTERNAL_API_KEY
+              value: "{{EXTERNAL_API_KEY}}"
+
+            # Payment service (non-sensitive — ConfigMap)
+            - name: PAYMENT_SERVICE_URL
+              value: "{{PAYMENT_SERVICE_URL}}"
+
+            # Payment service (sensitive — Secret)
+            - name: PAYMENT_SERVICE_USERNAME
+              value: "{{PAYMENT_SERVICE_USERNAME}}"
+            - name: PAYMENT_SERVICE_PASSWORD
+              value: "{{PAYMENT_SERVICE_PASSWORD}}"
+
+            # Security (sensitive — Secret)
+            - name: JWT_SECRET
+              value: "{{JWT_SECRET}}"
+            - name: ADMIN_USERNAME
+              value: "{{ADMIN_USERNAME}}"
+            - name: ADMIN_PASSWORD
+              value: "{{ADMIN_PASSWORD}}"
+            - name: ENCRYPTION_KEY
+              value: "{{ENCRYPTION_KEY}}"
+
+            # Messaging — RabbitMQ (non-sensitive — ConfigMap)
+            - name: RABBITMQ_HOST
+              value: "{{RABBITMQ_HOST}}"
+            - name: RABBITMQ_PORT
+              value: "{{RABBITMQ_PORT}}"
+
+            # Messaging — RabbitMQ (sensitive — Secret)
+            - name: RABBITMQ_USERNAME
+              value: "{{RABBITMQ_USERNAME}}"
+            - name: RABBITMQ_PASSWORD
+              value: "{{RABBITMQ_PASSWORD}}"
+
+            # Monitoring (non-sensitive — ConfigMap)
+            - name: MONITORING_ENDPOINT
+              value: "{{MONITORING_ENDPOINT}}"
+            - name: MONITORING_USERNAME
+              value: "{{MONITORING_USERNAME}}"
+            - name: MONITORING_PASSWORD
+              value: "{{MONITORING_PASSWORD}}"
+
+            # File paths
+            - name: APP_CONFIG_DIR
+              value: "/mnt/config"
+            - name: APP_LOG_DIR
+              value: "/mnt/logs"
+            - name: APP_TEMP_DIR
+              value: "/tmp/mini-app"
+            - name: APP_UPLOAD_DIR
+              value: "/mnt/uploads"
+
+            # Environment
+            - name: APP_ENVIRONMENT
+              value: "production"
+            - name: DEBUG_ENABLED
+              value: "false"
+
+            # JVM options
+            - name: JAVA_OPTS
+              value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UnlockExperimentalVMOptions -Xms256m -Xmx512m -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Duser.timezone=UTC"
+
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 3
+
+          volumeMounts:
+            - name: app-config
+              mountPath: /mnt/config
+            - name: app-logs
+              mountPath: /mnt/logs
+            - name: app-uploads
+              mountPath: /mnt/uploads
+
+      volumes:
+        - name: app-config
+          emptyDir: {}
+        - name: app-logs
+          emptyDir: {}
+        - name: app-uploads
+          emptyDir: {}
+
+      terminationGracePeriodSeconds: 30

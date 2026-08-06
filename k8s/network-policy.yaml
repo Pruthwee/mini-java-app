@@ -1,0 +1,161 @@
+# =============================================================================
+# Kubernetes NetworkPolicy — mini-java-app (EKS)
+#
+# Rule: cz-java-0082 — Individual Components / Service Isolation
+# Remediation: Enforce Service Isolation with Kubernetes NetworkPolicy on EKS
+#
+# Purpose:
+#   Apply least-privilege network policies to enforce explicit, controlled
+#   communication between decomposed microservices on EKS, preventing residual
+#   tight coupling through unrestricted network access.
+#
+# Policies defined in this file:
+#   1. default-deny-all          — deny all ingress/egress by default (namespace-wide)
+#   2. allow-mini-java-app-ingress — allow inbound traffic to mini-java-app only from
+#                                    permitted callers (ingress controller, peer services)
+#   3. allow-mini-java-app-egress  — allow outbound traffic from mini-java-app only to
+#                                    explicitly named downstream services (DB, Redis,
+#                                    external APIs via egress CIDR, DNS)
+#
+# Usage:
+#   kubectl apply -f k8s/network-policy.yaml -n <namespace>
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 1. Default-deny all ingress and egress for every pod in the namespace.
+#    Individual policies below selectively re-open only the required paths.
+# -----------------------------------------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: mini-java-app-ns
+  labels:
+    app: mini-java-app
+    rule: cz-java-0082
+spec:
+  podSelector: {}          # applies to ALL pods in the namespace
+  policyTypes:
+    - Ingress
+    - Egress
+
+---
+
+# -----------------------------------------------------------------------------
+# 2. Allow ingress to mini-java-app pods.
+#    Permitted sources:
+#      • NGINX / AWS ALB ingress controller (label: app=ingress-nginx)
+#      • Peer microservices that legitimately call this service
+#        (label: role=api-consumer)
+#    Permitted ports:
+#      • 8080 — application HTTP port
+#      • 8081 — Spring Boot Actuator / management port (health probes)
+# -----------------------------------------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-mini-java-app-ingress
+  namespace: mini-java-app-ns
+  labels:
+    app: mini-java-app
+    rule: cz-java-0082
+spec:
+  podSelector:
+    matchLabels:
+      app: mini-java-app
+  policyTypes:
+    - Ingress
+  ingress:
+    # Traffic from the ingress controller (external user-facing requests)
+    - from:
+        - podSelector:
+            matchLabels:
+              app: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Traffic from authorised peer microservices
+    - from:
+        - podSelector:
+            matchLabels:
+              role: api-consumer
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Kubernetes liveness / readiness probes from the kubelet (node-level)
+    - ports:
+        - protocol: TCP
+          port: 8081
+
+---
+
+# -----------------------------------------------------------------------------
+# 3. Allow egress from mini-java-app pods.
+#    Permitted destinations:
+#      • MySQL database service  (label: app=mysql,  port 3306)
+#      • Redis cache service     (label: app=redis,  port 6379)
+#      • External API / payment  (CIDR 0.0.0.0/0,   ports 80 & 443)
+#        — restrict to specific CIDRs in production if IPs are known
+#      • Kubernetes DNS          (kube-system namespace, port 53 UDP/TCP)
+# -----------------------------------------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-mini-java-app-egress
+  namespace: mini-java-app-ns
+  labels:
+    app: mini-java-app
+    rule: cz-java-0082
+spec:
+  podSelector:
+    matchLabels:
+      app: mini-java-app
+  policyTypes:
+    - Egress
+  egress:
+    # MySQL database (DB_HOST resolved to the in-cluster service)
+    - to:
+        - podSelector:
+            matchLabels:
+              app: mysql
+      ports:
+        - protocol: TCP
+          port: 3306
+
+    # Redis cache (REDIS_HOST resolved to the in-cluster service)
+    - to:
+        - podSelector:
+            matchLabels:
+              app: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+
+    # External HTTP/HTTPS APIs (EXTERNAL_API_URL, PAYMENT_SERVICE_URL)
+    # Restrict ipBlock.cidr to known egress CIDRs in production environments.
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8       # block direct access to private RFC-1918 ranges
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 80
+        - protocol: TCP
+          port: 443
+
+    # Kubernetes DNS — required for service-name resolution
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
