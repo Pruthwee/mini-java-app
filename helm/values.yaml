@@ -1,0 +1,86 @@
+# =============================================================================
+# values.yaml — Single source of truth for all port configuration
+# Remediation: cz-java-0061 (Hardcoded Ports) — Helm Chart Parameterization
+#              for Dynamic Port Management on EKS
+#
+# All port values defined here are propagated consistently to:
+#   - Deployment (container ports & env vars)
+#   - Service (targetPort / port)
+#   - Ingress (backend service port)
+#   - Liveness / Readiness health probes
+# =============================================================================
+
+replicaCount: 1
+
+image:
+  repository: mini-java-app
+  pullPolicy: IfNotPresent
+  tag: "1.0.0"
+
+# -----------------------------------------------------------------------------
+# Port configuration — edit here to change ports across ALL resources
+# -----------------------------------------------------------------------------
+service:
+  # Application HTTP server port (cz-java-0061: was hardcoded 8080 in MiniApp.java)
+  port: 8080
+  # Redis cache port (cz-java-0061: was hardcoded 6379 in DatabaseService.java)
+  redisPort: 6379
+  # Actuator / management port for health probes
+  managementPort: 8080
+  type: ClusterIP
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations: {}
+  hosts:
+    - host: mini-java-app.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# -----------------------------------------------------------------------------
+# Health probe configuration — references service.managementPort
+# -----------------------------------------------------------------------------
+healthCheck:
+  liveness:
+    path: /actuator/health
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readiness:
+    path: /actuator/health
+    initialDelaySeconds: 15
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# -----------------------------------------------------------------------------
+# Environment variables injected into the container at runtime
+# These map Helm values to the env vars read by the Java application
+# -----------------------------------------------------------------------------
+env:
+  SERVER_PORT: "{{ .Values.service.port }}"
+  REDIS_PORT: "{{ .Values.service.redisPort }}"
+  DB_HOST: ""
+  DB_PORT: "3306"
+  DB_NAME: "mini_app_db"
+  DB_USERNAME: ""
+  DB_PASSWORD: ""
+  APP_CONFIG_FILE_PATH: "/mnt/efs/app/config/app.properties"
+  APP_LOG_FILE_PATH: "/mnt/efs/logs/mini-app.log"
+  APP_LOG_DIR: "/mnt/efs/logs"
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

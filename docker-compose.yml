@@ -1,0 +1,70 @@
+version: "3.8"
+
+services:
+  mini-java-app:
+    image: mini-java-app:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mini-java-app
+    ports:
+      - "8080:8080"
+    environment:
+      # Spring profile
+      SPRING_PROFILES_ACTIVE: docker
+      # JVM options
+      JAVA_OPTS: "-Xmx512m -Xms256m -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+      # Server configuration
+      SERVER_PORT: "8080"
+      # Database configuration (provide actual values)
+      DB_HOST: "${DB_HOST:-localhost}"
+      DB_PORT: "${DB_PORT:-3306}"
+      DB_NAME: "${DB_NAME:-mini_app_db}"
+      DB_USERNAME: "${DB_USERNAME:-root}"
+      DB_PASSWORD: "${DB_PASSWORD:-}"
+      # Redis / cache configuration
+      REDIS_HOST: "${REDIS_HOST:-localhost}"
+      REDIS_PORT: "${REDIS_PORT:-6379}"
+      # External API configuration
+      EXTERNAL_API_BASE_URL: "${EXTERNAL_API_BASE_URL:-http://api.example.com:8080/v1}"
+      EXTERNAL_API_TIMEOUT: "${EXTERNAL_API_TIMEOUT:-30000}"
+      EXTERNAL_API_KEY: "${EXTERNAL_API_KEY:-}"
+      # Payment service configuration
+      PAYMENT_SERVICE_URL: "${PAYMENT_SERVICE_URL:-https://payment.internal.company.com/process}"
+      PAYMENT_SERVICE_USERNAME: "${PAYMENT_SERVICE_USERNAME:-}"
+      PAYMENT_SERVICE_PASSWORD: "${PAYMENT_SERVICE_PASSWORD:-}"
+      # File paths (EFS-backed in Kubernetes)
+      APP_CONFIG_FILE_PATH: "${APP_CONFIG_FILE_PATH:-/mnt/efs/app/config/app.properties}"
+      APP_LOG_DIR: "${APP_LOG_DIR:-/var/log/mini-app}"
+      APP_LOG_FILE_PATH: "${APP_LOG_FILE_PATH:-/mnt/efs/logs/mini-app.log}"
+      # Security configuration
+      SECURITY_JWT_SECRET: "${SECURITY_JWT_SECRET:-}"
+      SECURITY_ADMIN_USERNAME: "${SECURITY_ADMIN_USERNAME:-admin}"
+      SECURITY_ADMIN_PASSWORD: "${SECURITY_ADMIN_PASSWORD:-}"
+      SECURITY_ENCRYPTION_KEY: "${SECURITY_ENCRYPTION_KEY:-}"
+      # Monitoring configuration
+      MONITORING_ENDPOINT: "${MONITORING_ENDPOINT:-}"
+      MONITORING_USERNAME: "${MONITORING_USERNAME:-}"
+      MONITORING_PASSWORD: "${MONITORING_PASSWORD:-}"
+      # Messaging / RabbitMQ configuration
+      MESSAGING_RABBITMQ_HOST: "${MESSAGING_RABBITMQ_HOST:-}"
+      MESSAGING_RABBITMQ_PORT: "${MESSAGING_RABBITMQ_PORT:-5672}"
+      MESSAGING_RABBITMQ_USERNAME: "${MESSAGING_RABBITMQ_USERNAME:-}"
+      MESSAGING_RABBITMQ_PASSWORD: "${MESSAGING_RABBITMQ_PASSWORD:-}"
+      # Application environment
+      ENVIRONMENT: "${ENVIRONMENT:-docker}"
+      TZ: UTC
+    volumes:
+      - app-config:/mnt/efs/app/config
+      - app-logs:/mnt/efs/logs
+    networks:
+      - app-network
+    restart: unless-stopped
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  app-config:
+  app-logs:

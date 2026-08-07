@@ -1,0 +1,10 @@
+apiVersion: v2
+name: mini-java-app
+description: >
+  Helm chart for mini-java-app on EKS.
+  Centralizes all port configuration in values.yaml to ensure consistent
+  port references across Deployment, Service, Ingress, and health probe
+  resources (cz-java-0061 remediation).
+type: application
+version: 1.0.0
+appVersion: "1.0.0"

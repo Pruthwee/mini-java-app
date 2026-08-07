@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mini-java-app.fullname" . }}
+  labels:
+    {{- include "mini-java-app.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "mini-java-app.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "mini-java-app.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          # ── Port binding — driven by values.yaml (cz-java-0061 remediation) ──
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          # ── Environment variables — ports injected from Helm values ──────────
+          env:
+            - name: SERVER_PORT
+              value: "{{ .Values.service.port }}"
+            - name: REDIS_PORT
+              value: "{{ .Values.service.redisPort }}"
+            - name: DB_HOST
+              value: "{{ .Values.env.DB_HOST }}"
+            - name: DB_PORT
+              value: "{{ .Values.env.DB_PORT }}"
+            - name: DB_NAME
+              value: "{{ .Values.env.DB_NAME }}"
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "mini-java-app.fullname" . }}-db-secret
+                  key: username
+                  optional: true
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "mini-java-app.fullname" . }}-db-secret
+                  key: password
+                  optional: true
+            - name: APP_CONFIG_FILE_PATH
+              value: "{{ .Values.env.APP_CONFIG_FILE_PATH }}"
+            - name: APP_LOG_FILE_PATH
+              value: "{{ .Values.env.APP_LOG_FILE_PATH }}"
+            - name: APP_LOG_DIR
+              value: "{{ .Values.env.APP_LOG_DIR }}"
+          # ── Health probes — port referenced from values.yaml ─────────────────
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.healthCheck.liveness.path }}
+              port: {{ .Values.service.managementPort }}
+            initialDelaySeconds: {{ .Values.healthCheck.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.healthCheck.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.healthCheck.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.healthCheck.liveness.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.healthCheck.readiness.path }}
+              port: {{ .Values.service.managementPort }}
+            initialDelaySeconds: {{ .Values.healthCheck.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.healthCheck.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.healthCheck.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.healthCheck.readiness.failureThreshold }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

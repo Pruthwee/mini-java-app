@@ -1,0 +1,126 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mini-java-app
+  namespace: mini-java-app
+  labels:
+    app: mini-java-app
+    version: "1.0.0"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mini-java-app
+  template:
+    metadata:
+      labels:
+        app: mini-java-app
+        version: "1.0.0"
+    spec:
+      containers:
+        - name: mini-java-app
+          image: {{IMAGE_URI}}
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            # Spring profile
+            - name: SPRING_PROFILES_ACTIVE
+              value: "docker"
+            # JVM options
+            - name: JAVA_OPTS
+              value: "-Xmx512m -Xms256m -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UnlockExperimentalVMOptions -Djava.security.egd=file:/dev/./urandom"
+            # Server
+            - name: SERVER_PORT
+              value: "8080"
+            # Database
+            - name: DB_HOST
+              value: "{{DB_HOST}}"
+            - name: DB_PORT
+              value: "{{DB_PORT}}"
+            - name: DB_NAME
+              value: "{{DB_NAME}}"
+            - name: DB_USERNAME
+              value: "{{DB_USERNAME}}"
+            - name: DB_PASSWORD
+              value: "{{DB_PASSWORD}}"
+            # Redis / Cache
+            - name: REDIS_HOST
+              value: "{{REDIS_HOST}}"
+            - name: REDIS_PORT
+              value: "{{REDIS_PORT}}"
+            # External API
+            - name: EXTERNAL_API_BASE_URL
+              value: "{{EXTERNAL_API_BASE_URL}}"
+            - name: EXTERNAL_API_TIMEOUT
+              value: "{{EXTERNAL_API_TIMEOUT}}"
+            - name: EXTERNAL_API_KEY
+              value: "{{EXTERNAL_API_KEY}}"
+            # Payment service
+            - name: PAYMENT_SERVICE_URL
+              value: "{{PAYMENT_SERVICE_URL}}"
+            - name: PAYMENT_SERVICE_USERNAME
+              value: "{{PAYMENT_SERVICE_USERNAME}}"
+            - name: PAYMENT_SERVICE_PASSWORD
+              value: "{{PAYMENT_SERVICE_PASSWORD}}"
+            # File paths (EFS-backed)
+            - name: APP_CONFIG_FILE_PATH
+              value: "{{APP_CONFIG_FILE_PATH}}"
+            - name: APP_LOG_DIR
+              value: "{{APP_LOG_DIR}}"
+            - name: APP_LOG_FILE_PATH
+              value: "{{APP_LOG_FILE_PATH}}"
+            # Security
+            - name: SECURITY_JWT_SECRET
+              value: "{{SECURITY_JWT_SECRET}}"
+            - name: SECURITY_ADMIN_USERNAME
+              value: "{{SECURITY_ADMIN_USERNAME}}"
+            - name: SECURITY_ADMIN_PASSWORD
+              value: "{{SECURITY_ADMIN_PASSWORD}}"
+            - name: SECURITY_ENCRYPTION_KEY
+              value: "{{SECURITY_ENCRYPTION_KEY}}"
+            # Monitoring
+            - name: MONITORING_ENDPOINT
+              value: "{{MONITORING_ENDPOINT}}"
+            - name: MONITORING_USERNAME
+              value: "{{MONITORING_USERNAME}}"
+            - name: MONITORING_PASSWORD
+              value: "{{MONITORING_PASSWORD}}"
+            # Messaging / RabbitMQ
+            - name: MESSAGING_RABBITMQ_HOST
+              value: "{{MESSAGING_RABBITMQ_HOST}}"
+            - name: MESSAGING_RABBITMQ_PORT
+              value: "{{MESSAGING_RABBITMQ_PORT}}"
+            - name: MESSAGING_RABBITMQ_USERNAME
+              value: "{{MESSAGING_RABBITMQ_USERNAME}}"
+            - name: MESSAGING_RABBITMQ_PASSWORD
+              value: "{{MESSAGING_RABBITMQ_PASSWORD}}"
+            # Timezone
+            - name: TZ
+              value: "UTC"
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+      terminationGracePeriodSeconds: 30
