@@ -1,0 +1,84 @@
+version: "3.9"
+
+services:
+  mini-java-app:
+    image: mini-java-app:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mini-java-app
+    ports:
+      - "8080:8080"
+    environment:
+      # Spring profile
+      SPRING_PROFILES_ACTIVE: docker
+
+      # JVM options
+      JAVA_OPTS: >-
+        -XX:+UseContainerSupport
+        -XX:MaxRAMPercentage=75.0
+        -Xms256m
+        -Xmx512m
+
+      # Timezone
+      TZ: UTC
+
+      # -----------------------------------------------------------------------
+      # Database connection (replace with actual values or use a .env file)
+      # -----------------------------------------------------------------------
+      DB_URL: jdbc:mysql://db-host:3306/mini_app_db
+      DB_USERNAME: ${DB_USERNAME:-}
+      DB_PASSWORD: ${DB_PASSWORD:-}
+      DB_DRIVER_CLASS: com.mysql.cj.jdbc.Driver
+      DB_QUERY_TIMEOUT_SECONDS: "30"
+
+      # -----------------------------------------------------------------------
+      # Redis cache
+      # -----------------------------------------------------------------------
+      REDIS_HOST: ${REDIS_HOST:-redis-host}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+
+      # -----------------------------------------------------------------------
+      # External services
+      # -----------------------------------------------------------------------
+      EXTERNAL_API_URL: ${EXTERNAL_API_URL:-}
+      PAYMENT_SERVICE_URL: ${PAYMENT_SERVICE_URL:-}
+
+      # -----------------------------------------------------------------------
+      # Application configuration
+      # -----------------------------------------------------------------------
+      APP_ENV: ${APP_ENV:-development}
+      APP_LOG_LEVEL: ${APP_LOG_LEVEL:-INFO}
+      APP_CONTEXT_PATH: ${APP_CONTEXT_PATH:-/mini-app}
+      SERVER_PORT: "8080"
+
+      # -----------------------------------------------------------------------
+      # Security (supply via .env – never commit real values)
+      # -----------------------------------------------------------------------
+      SECURITY_JWT_SECRET: ${SECURITY_JWT_SECRET:-}
+      SECURITY_ADMIN_USERNAME: ${SECURITY_ADMIN_USERNAME:-}
+      SECURITY_ADMIN_PASSWORD: ${SECURITY_ADMIN_PASSWORD:-}
+
+      # -----------------------------------------------------------------------
+      # Monitoring
+      # -----------------------------------------------------------------------
+      MONITORING_ENDPOINT: ${MONITORING_ENDPOINT:-}
+      MONITORING_USERNAME: ${MONITORING_USERNAME:-}
+      MONITORING_PASSWORD: ${MONITORING_PASSWORD:-}
+
+    volumes:
+      - app-config:/mnt/efs/app/config
+      - app-logs:/mnt/efs/logs
+
+    restart: unless-stopped
+
+    networks:
+      - app-network
+
+volumes:
+  app-config:
+  app-logs:
+
+networks:
+  app-network:
+    driver: bridge

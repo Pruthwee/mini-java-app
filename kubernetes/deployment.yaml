@@ -1,0 +1,153 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mini-java-app
+  namespace: mini-java-app
+  labels:
+    app: mini-java-app
+    app.kubernetes.io/name: mini-java-app
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/component: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mini-java-app
+  template:
+    metadata:
+      labels:
+        app: mini-java-app
+        app.kubernetes.io/name: mini-java-app
+    spec:
+      containers:
+        - name: mini-java-app
+          image: "{{IMAGE_URI}}"
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            # Spring profile
+            - name: SPRING_PROFILES_ACTIVE
+              value: "docker"
+
+            # JVM options
+            - name: JAVA_OPTS
+              value: >-
+                -XX:+UseContainerSupport
+                -XX:MaxRAMPercentage=75.0
+                -XX:+UnlockExperimentalVMOptions
+                -Xms256m
+                -Xmx512m
+                -Djava.security.egd=file:/dev/./urandom
+                -Dfile.encoding=UTF-8
+                -Duser.timezone=UTC
+
+            # Timezone
+            - name: TZ
+              value: "UTC"
+
+            # Application port
+            - name: SERVER_PORT
+              value: "8080"
+
+            # Application config
+            - name: APP_ENV
+              value: "{{APP_ENV}}"
+            - name: APP_LOG_LEVEL
+              value: "{{APP_LOG_LEVEL}}"
+            - name: APP_CONTEXT_PATH
+              value: "{{APP_CONTEXT_PATH}}"
+
+            # Database connection
+            - name: DB_URL
+              value: "{{DB_URL}}"
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mini-java-app-secrets
+                  key: db-username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mini-java-app-secrets
+                  key: db-password
+            - name: DB_DRIVER_CLASS
+              value: "com.mysql.cj.jdbc.Driver"
+            - name: DB_QUERY_TIMEOUT_SECONDS
+              value: "30"
+
+            # Redis cache
+            - name: REDIS_HOST
+              value: "{{REDIS_HOST}}"
+            - name: REDIS_PORT
+              value: "{{REDIS_PORT}}"
+
+            # External services
+            - name: EXTERNAL_API_URL
+              value: "{{EXTERNAL_API_URL}}"
+            - name: PAYMENT_SERVICE_URL
+              value: "{{PAYMENT_SERVICE_URL}}"
+
+            # Security (from Kubernetes Secret)
+            - name: SECURITY_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: mini-java-app-secrets
+                  key: jwt-secret
+            - name: SECURITY_ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mini-java-app-secrets
+                  key: admin-username
+            - name: SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mini-java-app-secrets
+                  key: admin-password
+
+            # Monitoring
+            - name: MONITORING_ENDPOINT
+              value: "{{MONITORING_ENDPOINT}}"
+            - name: MONITORING_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mini-java-app-secrets
+                  key: monitoring-username
+            - name: MONITORING_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mini-java-app-secrets
+                  key: monitoring-password
+
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+            successThreshold: 1
+
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 3
+            successThreshold: 1
+
+      terminationGracePeriodSeconds: 30
+      restartPolicy: Always

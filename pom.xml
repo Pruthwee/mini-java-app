@@ -21,10 +21,17 @@
             <artifactId>mysql-connector-java</artifactId>
             <version>8.0.33</version>
         </dependency>
-        
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+            <version>2.7.0</version>
+        </dependency>
+
+        <!-- Health check endpoint: spring-boot-starter-actuator exposes /actuator/health -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
             <version>2.7.0</version>
         </dependency>
     </dependencies>
@@ -39,6 +46,22 @@
                     <source>11</source>
                     <target>11</target>
                 </configuration>
+            </plugin>
+            <!-- Spring Boot Maven plugin: packages the application as an executable JAR -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>2.7.0</version>
+                <configuration>
+                    <mainClass>com.test.MiniAppApplication</mainClass>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

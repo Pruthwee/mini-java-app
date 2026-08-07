@@ -1,0 +1,253 @@
+# =============================================================================
+# Kubernetes NetworkPolicy – mini-java-app (EKS)
+#
+# FIX cz-java-0082 (Individual Components / Service Isolation):
+#   Enforces explicit, least-privilege communication between decomposed
+#   microservices on EKS.  Each policy below restricts ingress and egress to
+#   only the declared service dependencies, preventing residual tight coupling
+#   through unrestricted network access.
+#
+# Apply with:
+#   kubectl apply -f k8s/network-policy.yaml -n <namespace>
+# =============================================================================
+
+---
+# ---------------------------------------------------------------------------
+# 1. mini-java-app – application pod policy
+#    Ingress : allow only from the ingress-controller (port 8080)
+#    Egress  : allow only to db-service (3306), redis-service (6379),
+#              external-api-service (8080), payment-service (443),
+#              and kube-dns (53/UDP+TCP) for service discovery
+# ---------------------------------------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mini-java-app-network-policy
+  namespace: default
+  labels:
+    app: mini-java-app
+    rule: cz-java-0082
+spec:
+  podSelector:
+    matchLabels:
+      app: mini-java-app
+  policyTypes:
+    - Ingress
+    - Egress
+
+  ingress:
+    # Allow inbound HTTP traffic only from the ingress controller
+    - from:
+        - podSelector:
+            matchLabels:
+              app: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
+
+  egress:
+    # Allow outbound to MySQL database service only
+    - to:
+        - podSelector:
+            matchLabels:
+              app: db-service
+      ports:
+        - protocol: TCP
+          port: 3306
+
+    # Allow outbound to Redis cache service only
+    - to:
+        - podSelector:
+            matchLabels:
+              app: redis-service
+      ports:
+        - protocol: TCP
+          port: 6379
+
+    # Allow outbound to external API service only
+    - to:
+        - podSelector:
+            matchLabels:
+              app: external-api-service
+      ports:
+        - protocol: TCP
+          port: 8080
+
+    # Allow outbound to payment service only (HTTPS)
+    - to:
+        - podSelector:
+            matchLabels:
+              app: payment-service
+      ports:
+        - protocol: TCP
+          port: 443
+
+    # Allow DNS resolution (kube-dns / CoreDNS)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+---
+# ---------------------------------------------------------------------------
+# 2. db-service – database pod policy
+#    Ingress : allow only from mini-java-app pods (port 3306)
+#    Egress  : deny all (database does not initiate outbound connections)
+# ---------------------------------------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: db-service-network-policy
+  namespace: default
+  labels:
+    app: db-service
+    rule: cz-java-0082
+spec:
+  podSelector:
+    matchLabels:
+      app: db-service
+  policyTypes:
+    - Ingress
+    - Egress
+
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: mini-java-app
+      ports:
+        - protocol: TCP
+          port: 3306
+
+  egress: []   # deny all egress
+
+---
+# ---------------------------------------------------------------------------
+# 3. redis-service – cache pod policy
+#    Ingress : allow only from mini-java-app pods (port 6379)
+#    Egress  : deny all
+# ---------------------------------------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: redis-service-network-policy
+  namespace: default
+  labels:
+    app: redis-service
+    rule: cz-java-0082
+spec:
+  podSelector:
+    matchLabels:
+      app: redis-service
+  policyTypes:
+    - Ingress
+    - Egress
+
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: mini-java-app
+      ports:
+        - protocol: TCP
+          port: 6379
+
+  egress: []   # deny all egress
+
+---
+# ---------------------------------------------------------------------------
+# 4. external-api-service – external API pod policy
+#    Ingress : allow only from mini-java-app pods (port 8080)
+#    Egress  : allow DNS only
+# ---------------------------------------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: external-api-service-network-policy
+  namespace: default
+  labels:
+    app: external-api-service
+    rule: cz-java-0082
+spec:
+  podSelector:
+    matchLabels:
+      app: external-api-service
+  policyTypes:
+    - Ingress
+    - Egress
+
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: mini-java-app
+      ports:
+        - protocol: TCP
+          port: 8080
+
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+---
+# ---------------------------------------------------------------------------
+# 5. payment-service – payment pod policy
+#    Ingress : allow only from mini-java-app pods (port 443)
+#    Egress  : allow DNS only
+# ---------------------------------------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: payment-service-network-policy
+  namespace: default
+  labels:
+    app: payment-service
+    rule: cz-java-0082
+spec:
+  podSelector:
+    matchLabels:
+      app: payment-service
+  policyTypes:
+    - Ingress
+    - Egress
+
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: mini-java-app
+      ports:
+        - protocol: TCP
+          port: 443
+
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
