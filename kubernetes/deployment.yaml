@@ -1,0 +1,169 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mini-java-app
+  namespace: mini-java-app
+  labels:
+    app: mini-java-app
+    version: "1.0.0"
+    managed-by: kubectl
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mini-java-app
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: mini-java-app
+        version: "1.0.0"
+    spec:
+      # ── Security context ──────────────────────────────────
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+
+      # ── Graceful shutdown ─────────────────────────────────
+      terminationGracePeriodSeconds: 60
+
+      containers:
+        - name: mini-java-app
+          image: "{{IMAGE_URI}}"
+          imagePullPolicy: Always
+
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+
+          # ── Environment variables ─────────────────────────
+          env:
+            # Spring
+            - name: SPRING_PROFILES_ACTIVE
+              value: "docker"
+            - name: SERVER_PORT
+              value: "8080"
+
+            # JVM
+            - name: JAVA_OPTS
+              value: "-Xms256m -Xmx512m -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom"
+
+            # Database
+            - name: DB_HOST
+              value: "{{DB_HOST}}"
+            - name: DB_PORT
+              value: "{{DB_PORT}}"
+            - name: DB_NAME
+              value: "{{DB_NAME}}"
+            - name: DB_USERNAME
+              value: "{{DB_USERNAME}}"
+            - name: DB_PASSWORD
+              value: "{{DB_PASSWORD}}"
+
+            # Redis
+            - name: REDIS_HOST
+              value: "{{REDIS_HOST}}"
+            - name: REDIS_PORT
+              value: "{{REDIS_PORT}}"
+
+            # External API
+            - name: EXTERNAL_API_BASE_URL
+              value: "{{EXTERNAL_API_BASE_URL}}"
+            - name: EXTERNAL_API_KEY
+              value: "{{EXTERNAL_API_KEY}}"
+            - name: EXTERNAL_API_TIMEOUT
+              value: "30000"
+
+            # Payment service
+            - name: PAYMENT_SERVICE_URL
+              value: "{{PAYMENT_SERVICE_URL}}"
+            - name: PAYMENT_SERVICE_USERNAME
+              value: "{{PAYMENT_SERVICE_USERNAME}}"
+            - name: PAYMENT_SERVICE_PASSWORD
+              value: "{{PAYMENT_SERVICE_PASSWORD}}"
+
+            # Security
+            - name: SECURITY_JWT_SECRET
+              value: "{{SECURITY_JWT_SECRET}}"
+            - name: SECURITY_ADMIN_USERNAME
+              value: "{{SECURITY_ADMIN_USERNAME}}"
+            - name: SECURITY_ADMIN_PASSWORD
+              value: "{{SECURITY_ADMIN_PASSWORD}}"
+            - name: SECURITY_ENCRYPTION_KEY
+              value: "{{SECURITY_ENCRYPTION_KEY}}"
+
+            # Monitoring
+            - name: MONITORING_ENDPOINT
+              value: "{{MONITORING_ENDPOINT}}"
+            - name: MONITORING_USERNAME
+              value: "{{MONITORING_USERNAME}}"
+            - name: MONITORING_PASSWORD
+              value: "{{MONITORING_PASSWORD}}"
+
+            # Messaging (RabbitMQ)
+            - name: MESSAGING_RABBITMQ_HOST
+              value: "{{MESSAGING_RABBITMQ_HOST}}"
+            - name: MESSAGING_RABBITMQ_PORT
+              value: "{{MESSAGING_RABBITMQ_PORT}}"
+            - name: MESSAGING_RABBITMQ_USERNAME
+              value: "{{MESSAGING_RABBITMQ_USERNAME}}"
+            - name: MESSAGING_RABBITMQ_PASSWORD
+              value: "{{MESSAGING_RABBITMQ_PASSWORD}}"
+
+            # Logging
+            - name: APP_LOG_DIR
+              value: "/app/logs"
+            - name: APP_LOG_FILE_PATH
+              value: "/app/logs/mini-app.log"
+
+            # Timezone
+            - name: TZ
+              value: "UTC"
+
+          # ── Resource limits ───────────────────────────────
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+
+          # ── Liveness probe ────────────────────────────────
+          # Uses /actuator/health (Spring Boot Actuator) — confirmed in pom.xml
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+            successThreshold: 1
+
+          # ── Readiness probe ───────────────────────────────
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 3
+            successThreshold: 1
+
+          # ── Volume mounts ─────────────────────────────────
+          volumeMounts:
+            - name: app-logs
+              mountPath: /app/logs
+
+      # ── Volumes ───────────────────────────────────────────
+      volumes:
+        - name: app-logs
+          emptyDir: {}

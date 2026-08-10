@@ -1,0 +1,165 @@
+# ============================================================
+# Kubernetes NetworkPolicy — Service Isolation on EKS
+# Rule: cz-java-0082 (Individual Components / Service Isolation)
+#
+# Remediation: Enforce explicit, least-privilege communication
+# between decomposed microservices on EKS using NetworkPolicy
+# resources, preventing residual tight coupling through
+# unrestricted network access.
+#
+# Apply with:
+#   kubectl apply -f k8s/network-policy.yaml
+# ============================================================
+
+# ------------------------------------------------------------------
+# 1. Default-deny all ingress and egress for the mini-java-app pods.
+#    No traffic is allowed unless explicitly permitted below.
+# ------------------------------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mini-java-app-default-deny
+  namespace: mini-java-app
+  labels:
+    app: mini-java-app
+    rule: cz-java-0082
+spec:
+  podSelector:
+    matchLabels:
+      app: mini-java-app
+  policyTypes:
+    - Ingress
+    - Egress
+
+---
+# ------------------------------------------------------------------
+# 2. Allow inbound HTTP traffic to the mini-java-app only from the
+#    API gateway / ingress controller pods (least-privilege ingress).
+# ------------------------------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mini-java-app-allow-ingress-from-gateway
+  namespace: mini-java-app
+  labels:
+    app: mini-java-app
+    rule: cz-java-0082
+spec:
+  podSelector:
+    matchLabels:
+      app: mini-java-app
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              role: api-gateway
+      ports:
+        - protocol: TCP
+          port: 8080
+
+---
+# ------------------------------------------------------------------
+# 3. Allow the mini-java-app to reach the database service ONLY.
+#    Prevents the service from initiating connections to any other
+#    internal or external endpoint (service isolation).
+# ------------------------------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mini-java-app-allow-egress-to-database
+  namespace: mini-java-app
+  labels:
+    app: mini-java-app
+    rule: cz-java-0082
+spec:
+  podSelector:
+    matchLabels:
+      app: mini-java-app
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              role: database
+      ports:
+        - protocol: TCP
+          port: 3306   # MySQL — value injected via DB_PORT env var at runtime
+
+---
+# ------------------------------------------------------------------
+# 4. Allow the mini-java-app to reach the Redis cache service ONLY.
+# ------------------------------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mini-java-app-allow-egress-to-cache
+  namespace: mini-java-app
+  labels:
+    app: mini-java-app
+    rule: cz-java-0082
+spec:
+  podSelector:
+    matchLabels:
+      app: mini-java-app
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              role: cache
+      ports:
+        - protocol: TCP
+          port: 6379   # Redis
+
+---
+# ------------------------------------------------------------------
+# 5. Allow DNS egress so the pod can resolve Kubernetes service names.
+# ------------------------------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mini-java-app-allow-egress-dns
+  namespace: mini-java-app
+  labels:
+    app: mini-java-app
+    rule: cz-java-0082
+spec:
+  podSelector:
+    matchLabels:
+      app: mini-java-app
+  policyTypes:
+    - Egress
+  egress:
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+---
+# ------------------------------------------------------------------
+# 6. Allow health-check probes from the Kubernetes control plane /
+#    kubelet to reach the /health and /actuator/health endpoints.
+# ------------------------------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mini-java-app-allow-health-probes
+  namespace: mini-java-app
+  labels:
+    app: mini-java-app
+    rule: cz-java-0082
+spec:
+  podSelector:
+    matchLabels:
+      app: mini-java-app
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 8080   # Spring Boot server port — health probes from kubelet

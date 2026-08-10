@@ -1,0 +1,58 @@
+# Java / Maven artefacts
+target/
+*.class
+*.jar
+*.war
+
+# Maven wrapper (never needed inside Docker — system mvn is used)
+mvnw
+mvnw.cmd
+.mvn/
+
+# Gradle wrapper (not used in this project, but excluded for safety)
+gradlew
+gradlew.bat
+gradle/wrapper/
+
+# Version control
+.git/
+.gitignore
+.gitattributes
+
+# IDE / editor files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+
+# OS artefacts
+.DS_Store
+Thumbs.db
+
+# Documentation
+*.md
+docs/
+
+# CI / CD
+.github/
+.gitlab-ci.yml
+Jenkinsfile
+
+# Test reports
+**/surefire-reports/
+**/failsafe-reports/
+
+# Logs
+*.log
+logs/
+
+# Kubernetes manifests (not needed in image)
+kubernetes/
+k8s/
+
+# Scripts (not needed in image)
+scripts/

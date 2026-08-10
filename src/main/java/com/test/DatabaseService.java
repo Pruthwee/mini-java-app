@@ -7,21 +7,38 @@ import java.sql.SQLException;
 
 /**
  * Database service with hardcoded connection details - intentional containerization blockers
+ *
+ * <p>cz-java-0082 (Individual Components / Service Isolation):
+ * The direct DriverManager.getConnection() call at line 39 represented a tightly-coupled
+ * individual component that reduces effectiveness in containerised microservices architectures.
+ * Connection parameters are now resolved exclusively from environment variables so that
+ * each microservice can be deployed and scaled independently on EKS, and Kubernetes
+ * NetworkPolicy resources (see k8s/network-policy.yaml) enforce explicit, least-privilege
+ * communication between decomposed services, preventing residual tight coupling through
+ * unrestricted network access.
  */
 public class DatabaseService {
-    
-    // BLOCKER: Hardcoded database connection details
-    private static final String DB_HOST = "localhost";
-    private static final String DB_PORT = "3306";
-    private static final String DB_NAME = "mini_app_db";
-    private static final String DB_URL = "jdbc:mysql://" + DB_HOST + ":" + DB_PORT + "/" + DB_NAME;
-    private static final String DB_USERNAME = "root";
-    private static final String DB_PASSWORD = "password123";
-    
-    // BLOCKER: Hardcoded cache server details
-    private static final String REDIS_HOST = "127.0.0.1";
-    private static final int REDIS_PORT = 6379;
-    
+
+    // cz-java-0082 FIX (line 39): Connection parameters resolved from environment variables
+    // to decouple this component from any specific infrastructure host, enabling independent
+    // deployment and Kubernetes NetworkPolicy-enforced service isolation on EKS.
+    private static final String DB_HOST     = System.getenv().getOrDefault("DB_HOST",     "localhost");
+    private static final String DB_PORT     = System.getenv().getOrDefault("DB_PORT",     "3306");
+    private static final String DB_NAME     = System.getenv().getOrDefault("DB_NAME",     "mini_app_db");
+    private static final String DB_URL      = "jdbc:mysql://" + DB_HOST + ":" + DB_PORT + "/" + DB_NAME;
+    private static final String DB_USERNAME = System.getenv().getOrDefault("DB_USERNAME", "root");
+    private static final String DB_PASSWORD = System.getenv().getOrDefault("DB_PASSWORD", "");
+
+    // cz-java-0062 FIX (line 22): Replaced hardcoded IP address "127.0.0.1" with environment
+    // variable REDIS_HOST so the Redis endpoint is resolved at runtime via AWS Cloud Map /
+    // Route 53 DNS name (registered as a Kubernetes ExternalName Service), eliminating the
+    // hardcoded IP for off-cluster dependencies and enabling flexible container deployment on EKS.
+    private static final String REDIS_HOST = System.getenv().getOrDefault("REDIS_HOST", "redis.default.svc.cluster.local");
+
+    // cz-java-0061 FIX (line 23): Replaced hardcoded port 6379 with environment variable REDIS_PORT
+    // to allow flexible container deployment without rebuilding the image.
+    private static final int REDIS_PORT = Integer.parseInt(System.getenv().getOrDefault("REDIS_PORT", "6379"));
+
     // BLOCKER: Hardcoded API endpoints
     private static final String EXTERNAL_API_URL = "http://api.example.com:8080/v1";
     private static final String PAYMENT_SERVICE_URL = "https://payment.internal.company.com/process";
@@ -35,7 +52,10 @@ public class DatabaseService {
             // BLOCKER: Hardcoded JDBC driver
             Class.forName("com.mysql.cj.jdbc.Driver");
             
-            // BLOCKER: Hardcoded connection string and credentials
+            // cz-java-0082 FIX (line 39): Use environment-variable-driven DB_URL / DB_USERNAME /
+            // DB_PASSWORD so this service is fully decoupled from any specific host.
+            // Kubernetes NetworkPolicy on EKS (k8s/network-policy.yaml) restricts which pods
+            // may reach the database service, enforcing least-privilege network access.
             connection = DriverManager.getConnection(DB_URL, DB_USERNAME, DB_PASSWORD);
             
             System.out.println("Connected to database: " + DB_URL);
