@@ -13,19 +13,70 @@
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <aws.sdk.version>2.25.11</aws.sdk.version>
     </properties>
 
+    <dependencyManagement>
+        <dependencies>
+            <!-- AWS SDK v2 BOM – manages all AWS module versions consistently -->
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>${aws.sdk.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
+        <!-- MySQL JDBC driver -->
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
             <version>8.0.33</version>
         </dependency>
-        
+
+        <!-- HikariCP connection pool – replaces raw DriverManager.getConnection() (cr-java-0073) -->
+        <!-- Combined with Amazon RDS Proxy endpoint (RDS_PROXY_ENDPOINT env var) for cloud-optimised -->
+        <!-- connection multiplexing and IAM-based authentication in AWS environments.               -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-            <version>2.7.0</version>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>5.1.0</version>
+        </dependency>
+
+        <!-- AWS SDK v2: S3 client – replaces hard-coded file-path operations (cr-java-0061) -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+        </dependency>
+
+        <!-- AWS SDK v2: URL connection HTTP client – used by all AWS SDK clients for explicit
+             connection and socket timeouts (cr-java-0097: Missing Connection Timeouts fix).
+             Provides UrlConnectionHttpClient with configurable connectionTimeout and socketTimeout. -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>url-connection-client</artifactId>
+        </dependency>
+
+        <!-- AWS SDK v2: Secrets Manager – replaces hard-coded DB credentials (cr-java-0069) -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>secretsmanager</artifactId>
+        </dependency>
+
+        <!-- AWS SDK v2: SSM Parameter Store – resolves hard-coded port numbers at runtime (cr-java-0077) -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>ssm</artifactId>
+        </dependency>
+
+        <!-- Jackson Databind – parses JSON secret payload from AWS Secrets Manager -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.15.2</version>
         </dependency>
     </dependencies>
 
