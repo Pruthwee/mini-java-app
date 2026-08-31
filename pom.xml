@@ -13,20 +13,92 @@
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- AWS SDK v2 version – centralised for easy upgrades -->
+        <aws.sdk.version>2.25.11</aws.sdk.version>
     </properties>
+    <!--
+        cr-java-0069 fix: AWS Secrets Manager SDK dependency added to support
+        retrieval of database credentials at runtime from AWS Secrets Manager.
+    -->
 
     <dependencies>
+
+        <!--
+            cr-java-0063 fix: Amazon S3 client (AWS SDK for Java v2).
+            Replaces all java.io.File-based persistent storage operations
+            with cloud-native S3 object storage calls.
+        -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>${aws.sdk.version}</version>
+        </dependency>
+
+        <!--
+            AWS SDK v2 URL-connection HTTP client – required by S3Client
+            when the Apache HTTP client is not on the classpath.
+        -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>url-connection-client</artifactId>
+            <version>${aws.sdk.version}</version>
+        </dependency>
+
+        <!-- AWS STS – used by the default credential provider chain -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>sts</artifactId>
+            <version>${aws.sdk.version}</version>
+        </dependency>
+
+        <!--
+            cr-java-0069 fix: AWS Secrets Manager client (AWS SDK for Java v2).
+            Replaces hard-coded database credentials with runtime retrieval
+            from AWS Secrets Manager for secure, rotatable credential management.
+        -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>secretsmanager</artifactId>
+            <version>${aws.sdk.version}</version>
+        </dependency>
+
+        <!--
+            cr-java-0077 fix: AWS Systems Manager (SSM) client (AWS SDK for Java v2).
+            Used to resolve hard-coded port numbers (DB_PORT, REDIS_PORT, SERVER_PORT)
+            at runtime from AWS Parameter Store, eliminating static port values and
+            enabling dynamic port assignment in ECS, EKS, and Elastic Beanstalk.
+        -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>ssm</artifactId>
+            <version>${aws.sdk.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
             <version>8.0.33</version>
         </dependency>
-        
+
+        <!--
+            cr-java-0073 fix: HikariCP connection pool dependency.
+            Replaces raw DriverManager.getConnection() calls with a managed
+            HikariCP connection pool for efficient resource utilization,
+            proper connection lifecycle management, and integration with
+            Amazon RDS Proxy for cloud-optimized database connections.
+        -->
+        <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>5.1.0</version>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
             <version>2.7.0</version>
         </dependency>
+
     </dependencies>
 
     <build>
