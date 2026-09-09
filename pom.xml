@@ -13,15 +13,76 @@
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <aws.sdk.version>2.25.11</aws.sdk.version>
+        <hikaricp.version>5.1.0</hikaricp.version>
     </properties>
 
     <dependencies>
+        <!-- MySQL JDBC driver -->
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
             <version>8.0.33</version>
         </dependency>
-        
+
+        <!--
+            HikariCP connection pool — REMEDIATION for cr-java-0073 (Direct JDBC Connections).
+            Replaces raw DriverManager.getConnection() calls with a managed connection pool.
+            In cloud deployments, the JDBC URL should point to an Amazon RDS Proxy endpoint
+            so that HikariCP connections are multiplexed and managed at the proxy layer,
+            providing connection reuse, IAM authentication, and automatic failover.
+        -->
+        <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>${hikaricp.version}</version>
+        </dependency>
+
+        <!-- AWS SDK v2 for S3 - replaces hard-coded file path operations -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>${aws.sdk.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>auth</artifactId>
+            <version>${aws.sdk.version}</version>
+        </dependency>
+
+        <!-- AWS SDK v2 for Secrets Manager - replaces hard-coded database credentials (cr-java-0069) -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>secretsmanager</artifactId>
+            <version>${aws.sdk.version}</version>
+        </dependency>
+
+        <!-- AWS SDK v2 for SSM Parameter Store - replaces classpath-bundled properties files (cr-java-0070) -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>ssm</artifactId>
+            <version>${aws.sdk.version}</version>
+        </dependency>
+
+        <!-- Jackson for parsing the JSON secret payload returned by Secrets Manager -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.15.2</version>
+        </dependency>
+
+        <!--
+            AWS SDK v2 Apache HTTP client — REMEDIATION for cr-java-0097 (Missing Connection Timeouts).
+            Provides ApacheHttpClient with explicit connectionTimeout and socketTimeout support,
+            preventing indefinite hangs on AWS SDK calls (SecretsManagerClient, S3Client, etc.)
+            in cloud environments with variable network latency.
+        -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>apache-client</artifactId>
+            <version>${aws.sdk.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
