@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.net.SocketException;
+import java.io.InputStream;
 import java.util.Properties;
 
 /**
@@ -11,12 +13,9 @@ import java.util.Properties;
  */
 public class MiniApp {
     
-    // BLOCKER: Hardcoded port number
-    private static final int SERVER_PORT = 8080;
-    
-    // BLOCKER: Hardcoded absolute file path
-    private static final String CONFIG_FILE_PATH = "/opt/app/config/app.properties";
-    private static final String LOG_FILE_PATH = "/var/log/mini-app.log";
+    private static final int SERVER_PORT = Integer.parseInt(System.getenv().getOrDefault("SERVER_PORT", "8080"));
+    private static final String CONFIG_FILE_PATH = System.getenv().getOrDefault("CONFIG_FILE_PATH", "config/app.properties");
+    private static final String LOG_FILE_PATH = System.getenv().getOrDefault("LOG_FILE_PATH", "logs/mini-app.log");
     
     public static void main(String[] args) {
         System.out.println("Starting Mini Java Application...");
@@ -44,7 +43,9 @@ public class MiniApp {
             File configFile = new File(CONFIG_FILE_PATH);
             if (configFile.exists()) {
                 Properties props = new Properties();
-                props.load(new FileInputStream(configFile));
+                try (InputStream inputStream = new FileInputStream(configFile)) {
+                    props.load(inputStream);
+                }
                 System.out.println("Configuration loaded from: " + CONFIG_FILE_PATH);
             } else {
                 System.out.println("Warning: Configuration file not found at: " + CONFIG_FILE_PATH);
@@ -57,12 +58,12 @@ public class MiniApp {
     private void initializeLogging() {
         try {
             // BLOCKER: Hardcoded absolute path for log file
-            File logDir = new File("/var/log");
-            if (!logDir.exists()) {
+            File logFile = new File(LOG_FILE_PATH);
+            File logDir = logFile.getParentFile();
+            if (logDir != null && !logDir.exists()) {
                 logDir.mkdirs();
             }
-            
-            File logFile = new File(LOG_FILE_PATH);
+
             if (!logFile.exists()) {
                 logFile.createNewFile();
             }
@@ -74,16 +75,18 @@ public class MiniApp {
     }
     
     private void startServer() {
-        try {
+        try (ServerSocket serverSocket = new ServerSocket(SERVER_PORT)) {
             // BLOCKER: Hardcoded port number
-            ServerSocket serverSocket = new ServerSocket(SERVER_PORT);
             System.out.println("Server started on port: " + SERVER_PORT);
             System.out.println("Server ready to accept connections...");
             
             // Simulate server running
             Thread.sleep(1000);
-            serverSocket.close();
-            
+        } catch (SocketException e) {
+            System.err.println("Failed to bind server socket: " + e.getMessage());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            System.err.println("Server execution interrupted: " + e.getMessage());
         } catch (Exception e) {
             System.err.println("Failed to start server: " + e.getMessage());
         }
