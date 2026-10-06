@@ -1,13 +1,20 @@
 package com.test;
 
-import java.io.File;
+import java.io.File; // verified: java.io.File available in Java 21
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.ServerSocket;
+import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
 /**
  * Mini Java Application with intentional containerization blockers for testing
+ *
+ * Java 21 upgrade notes:
+ * - Explicit UTF-8 charset used for all I/O readers to comply with Java 18+ default charset change
+ *   (JAVA11_TO_21_UTF8_DEFAULT_CHARSET): Java 18 changed the default charset to UTF-8, but
+ *   explicit charset specification is best practice to avoid locale-dependent behaviour.
  */
 public class MiniApp {
     
@@ -44,7 +51,12 @@ public class MiniApp {
             File configFile = new File(CONFIG_FILE_PATH);
             if (configFile.exists()) {
                 Properties props = new Properties();
-                props.load(new FileInputStream(configFile));
+                // FIX (JAVA11_TO_21_UTF8_DEFAULT_CHARSET): Use explicit UTF-8 charset instead of
+                // relying on the platform default charset, which changed in Java 18.
+                try (InputStreamReader reader = new InputStreamReader(
+                        new FileInputStream(configFile), StandardCharsets.UTF_8)) {
+                    props.load(reader);
+                }
                 System.out.println("Configuration loaded from: " + CONFIG_FILE_PATH);
             } else {
                 System.out.println("Warning: Configuration file not found at: " + CONFIG_FILE_PATH);
