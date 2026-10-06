@@ -1,5 +1,6 @@
 package com.test;
 
+import java.net.URI;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -7,6 +8,14 @@ import java.sql.SQLException;
 
 /**
  * Database service with hardcoded connection details - intentional containerization blockers
+ *
+ * Java 21 upgrade changes:
+ * - Replaced deprecated Thread.getId() with Thread.threadId()
+ *   (Rule: JAVA11_TO_21_THREAD_GETID_DEPRECATED – Thread.getId() is deprecated in Java 19+;
+ *   threadId() is the correct replacement.)
+ * - Replaced new URL(String) constructor with URI.create(...).toURL()
+ *   (Rule: JAVA11_TO_21_URL_CONSTRUCTOR_DEPRECATED – URL(String) constructors are deprecated
+ *   in Java 20+; construct a URI and convert to URL at the boundary that still needs one.)
  */
 public class DatabaseService {
     
@@ -23,14 +32,21 @@ public class DatabaseService {
     private static final int REDIS_PORT = 6379;
     
     // BLOCKER: Hardcoded API endpoints
-    private static final String EXTERNAL_API_URL = "http://api.example.com:8080/v1";
-    private static final String PAYMENT_SERVICE_URL = "https://payment.internal.company.com/process";
+    // Java 21 upgrade: store as URI strings; convert to URL only when a URL is strictly required
+    // (JAVA11_TO_21_URL_CONSTRUCTOR_DEPRECATED)
+    private static final String EXTERNAL_API_URI_STR = "http://api.example.com:8080/v1";
+    private static final String PAYMENT_SERVICE_URI_STR = "https://payment.internal.company.com/process";
     
     private Connection connection;
     
     public void connect() {
         try {
             System.out.println("Connecting to database...");
+
+            // Java 21 upgrade: log current thread id using threadId() instead of deprecated getId()
+            // (JAVA11_TO_21_THREAD_GETID_DEPRECATED)
+            long tid = Thread.currentThread().threadId();
+            System.out.println("Connecting on thread id: " + tid);
             
             // BLOCKER: Hardcoded JDBC driver
             Class.forName("com.mysql.cj.jdbc.Driver");
@@ -61,9 +77,14 @@ public class DatabaseService {
     }
     
     private void initializeExternalServices() {
+        // Java 21 upgrade: use URI.create() instead of new URL(String) to avoid deprecated constructor
+        // (JAVA11_TO_21_URL_CONSTRUCTOR_DEPRECATED)
+        URI externalApiUri = URI.create(EXTERNAL_API_URI_STR);
+        URI paymentServiceUri = URI.create(PAYMENT_SERVICE_URI_STR);
+
         // BLOCKER: Hardcoded external service URLs
-        System.out.println("Initializing external API: " + EXTERNAL_API_URL);
-        System.out.println("Initializing payment service: " + PAYMENT_SERVICE_URL);
+        System.out.println("Initializing external API: " + externalApiUri);
+        System.out.println("Initializing payment service: " + paymentServiceUri);
     }
     
     public void executeQuery(String sql) {

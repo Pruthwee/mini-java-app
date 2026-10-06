@@ -4,10 +4,16 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
 /**
  * Mini Java Application with intentional containerization blockers for testing
+ *
+ * Java 21 upgrade changes:
+ * - Explicit StandardCharsets.UTF_8 passed to charset-sensitive I/O operations
+ *   (Rule: JAVA11_TO_21_UTF8_DEFAULT_CHARSET – Java 18+ uses UTF-8 as the default
+ *   charset, but passing it explicitly avoids any locale-dependent mis-reads.)
  */
 public class MiniApp {
     
@@ -44,7 +50,11 @@ public class MiniApp {
             File configFile = new File(CONFIG_FILE_PATH);
             if (configFile.exists()) {
                 Properties props = new Properties();
-                props.load(new FileInputStream(configFile));
+                // Java 21 upgrade: use InputStreamReader with explicit UTF-8 charset
+                // (JAVA11_TO_21_UTF8_DEFAULT_CHARSET) to avoid locale-dependent decoding.
+                try (FileInputStream fis = new FileInputStream(configFile)) {
+                    props.load(new java.io.InputStreamReader(fis, StandardCharsets.UTF_8));
+                }
                 System.out.println("Configuration loaded from: " + CONFIG_FILE_PATH);
             } else {
                 System.out.println("Warning: Configuration file not found at: " + CONFIG_FILE_PATH);
