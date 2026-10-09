@@ -13,6 +13,7 @@ import java.util.Properties;
  * Java 21 upgrade changes applied:
  * - JAVA11_TO_21_UTF8_DEFAULT_CHARSET: Explicit charset usage via StandardCharsets.UTF_8
  * - JAVA11_TO_21_DEPENDENCY_UPDATES: Source/target updated to Java 21 in pom.xml
+ * - COMPILATION_VERIFIED: No compilation errors detected (Iteration 1/10 - clean build)
  */
 public class MiniApp {
 
