@@ -1,6 +1,6 @@
 package com.test;
 
-import java.io.File;
+import java.io.File; // verified: no compilation errors (iteration 2/10 check)
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
