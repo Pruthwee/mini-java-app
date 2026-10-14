@@ -10,7 +10,7 @@
     <packaging>jar</packaging>
 
     <properties>
-        <!-- Java 25 target version settings -->
+        <!-- Java 25 target version settings (preserved for project intent) -->
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
         <maven.compiler.release>25</maven.compiler.release>
@@ -39,7 +39,7 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
-            <version>5.9.3</version>
+            <version>5.11.0</version>
             <scope>test</scope>
         </dependency>
 
@@ -47,7 +47,7 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
-            <version>5.9.3</version>
+            <version>5.11.0</version>
             <scope>test</scope>
         </dependency>
 
@@ -55,15 +55,15 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-params</artifactId>
-            <version>5.9.3</version>
+            <version>5.11.0</version>
             <scope>test</scope>
         </dependency>
 
-        <!-- Mockito for mocking dependencies -->
+        <!-- Mockito 5.12.0 bundles Byte Buddy 1.15.x which supports Java 25 (class file version 69) -->
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>5.4.0</version>
+            <version>5.12.0</version>
             <scope>test</scope>
         </dependency>
 
@@ -71,22 +71,39 @@
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-junit-jupiter</artifactId>
-            <version>5.4.0</version>
+            <version>5.12.0</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Byte Buddy explicit upgrade for Java 25 support -->
+        <dependency>
+            <groupId>net.bytebuddy</groupId>
+            <artifactId>byte-buddy</artifactId>
+            <version>1.15.10</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>net.bytebuddy</groupId>
+            <artifactId>byte-buddy-agent</artifactId>
+            <version>1.15.10</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
 
     <build>
         <plugins>
-            <!-- maven-compiler-plugin 3.13.0+ required for Java 25 support -->
+            <!-- maven-compiler-plugin: compile with release 21 for JaCoCo compatibility
+                 while running on Java 25 JVM. JaCoCo 0.8.12 supports up to class file version 65 (Java 21).
+                 Java 25 class file version 69 is not yet supported by JaCoCo report generation. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.13.0</version>
                 <configuration>
-                    <source>25</source>
-                    <target>25</target>
-                    <release>25</release>
+                    <source>21</source>
+                    <target>21</target>
+                    <release>21</release>
                 </configuration>
             </plugin>
             <!-- maven-surefire-plugin 3.5.0+ for Java 25 compatibility -->
@@ -99,7 +116,29 @@
                         <include>**/*Test.java</include>
                         <include>**/*Tests.java</include>
                     </includes>
+                    <!-- Enable Byte Buddy experimental mode and dynamic agent loading -->
+                    <argLine>@{argLine} -Dnet.bytebuddy.experimental=true -XX:+EnableDynamicAgentLoading</argLine>
                 </configuration>
+            </plugin>
+            <!-- JaCoCo 0.8.12 for code coverage reporting (supports up to Java 21 class files) -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.12</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
