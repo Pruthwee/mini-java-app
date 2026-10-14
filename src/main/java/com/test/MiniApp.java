@@ -3,6 +3,7 @@ package com.test;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.util.Properties;
@@ -11,7 +12,10 @@ import java.util.Properties;
  * Mini Java Application with intentional containerization blockers for testing.
  *
  * Java 21 upgrade changes applied:
- * - [JAVA11_TO_21_UTF8_DEFAULT_CHARSET] Explicit StandardCharsets.UTF_8 used where charset matters.
+ * - [JAVA11_TO_21_UTF8_DEFAULT_CHARSET] Explicit StandardCharsets.UTF_8 used in
+ *   Properties.load() via InputStreamReader to avoid reliance on the platform default
+ *   charset (which was OS-locale-dependent in Java 11 and became UTF-8 by default in
+ *   Java 18+; using an explicit charset ensures consistent behaviour across all versions).
  * - [JAVA11_TO_21_DEPENDENCY_UPDATES] Source/target updated to Java 21 in pom.xml.
  * - [JAVA11_TO_21_MAVEN_PLUGIN_UPDATES] maven-compiler-plugin updated to 3.11.0 in pom.xml.
  * - [JAVA11_TO_21_SPRING_BOOT_COMPATIBILITY] Spring Boot updated to 3.2.4 in pom.xml.
@@ -54,8 +58,9 @@ public class MiniApp {
                 // [JAVA11_TO_21_UTF8_DEFAULT_CHARSET] Use explicit UTF-8 charset instead of
                 // relying on the platform default (which changed to UTF-8 in Java 18 but was
                 // OS-locale-dependent in Java 11).
-                try (FileInputStream fis = new FileInputStream(configFile)) {
-                    props.load(new java.io.InputStreamReader(fis, StandardCharsets.UTF_8));
+                try (FileInputStream fis = new FileInputStream(configFile);
+                     InputStreamReader reader = new InputStreamReader(fis, StandardCharsets.UTF_8)) {
+                    props.load(reader);
                 }
                 System.out.println("Configuration loaded from: " + CONFIG_FILE_PATH);
             } else {
