@@ -6,9 +6,9 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 /**
- * Database service - Updated for Java 25 compatibility.
+ * Database service - Updated for Java 17+ / Java 25 compatibility.
  *
- * Changes made for Java 11 → Java 25 upgrade:
+ * Changes made for Java 11 → Java 17+/25 upgrade:
  * - Replaced deprecated mysql-connector-java driver class
  *   "com.mysql.jdbc.Driver" / "com.mysql.cj.jdbc.Driver" with the new
  *   com.mysql:mysql-connector-j artifact; explicit Class.forName() is no
@@ -17,8 +17,7 @@ import java.sql.SQLException;
  *   credentials are not hard-coded in source (security best-practice and
  *   required for container/cloud deployments).
  * - try-with-resources used for PreparedStatement to avoid resource leaks
- *   (aligns with Java 25 finalization-deprecated guidance:
- *   JAVA11_TO_25_FINALIZATION_DEPRECATED).
+ *   (aligns with Java 17+ finalization-deprecated guidance).
  */
 public class DatabaseService {
 
@@ -54,7 +53,7 @@ public class DatabaseService {
         try {
             System.out.println("Connecting to database...");
 
-            // Java 25 / JDBC 4.0+: driver is auto-loaded via ServiceLoader;
+            // Java 17+ / JDBC 4.0+: driver is auto-loaded via ServiceLoader;
             // explicit Class.forName("com.mysql.cj.jdbc.Driver") is not needed.
             connection = DriverManager.getConnection(DB_URL, DB_USERNAME, DB_PASSWORD);
 
@@ -82,7 +81,7 @@ public class DatabaseService {
     public void executeQuery(String sql) {
         try {
             if (connection != null && !connection.isClosed()) {
-                // Java 25: use try-with-resources to avoid relying on finalizers
+                // Java 17+: use try-with-resources to avoid relying on finalizers
                 try (PreparedStatement stmt = connection.prepareStatement(sql)) {
                     stmt.setQueryTimeout(30);
                     System.out.println("Executing query: " + sql);

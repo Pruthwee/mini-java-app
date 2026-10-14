@@ -3,18 +3,21 @@ package com.test;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
 /**
- * Mini Java Application - Updated for Java 25 compatibility.
+ * Mini Java Application - Updated for Java 17+ / Java 25 compatibility.
  *
- * Changes made for Java 11 → Java 25 upgrade:
+ * Changes made for Java 11 → Java 17+/25 upgrade:
  * - Explicit charset (StandardCharsets.UTF_8) used where byte/char conversions occur
  *   to comply with the UTF-8 default-charset rule (JAVA11_TO_25_UTF8_DEFAULT_CHARSET).
  * - File paths and port now read from environment variables / system properties so the
  *   application is portable across environments.
+ * - InputStreamReader with explicit charset replaces raw FileInputStream.load()
+ *   to avoid locale-dependent charset issues.
  */
 public class MiniApp {
 
@@ -49,9 +52,9 @@ public class MiniApp {
             File configFile = new File(CONFIG_FILE_PATH);
             if (configFile.exists()) {
                 Properties props = new Properties();
-                // Java 25: use explicit UTF-8 charset to avoid locale-charset ambiguity
-                try (var fis = new FileInputStream(configFile);
-                     var reader = new java.io.InputStreamReader(fis, StandardCharsets.UTF_8)) {
+                // Java 17+: use explicit UTF-8 charset to avoid locale-charset ambiguity
+                try (FileInputStream fis = new FileInputStream(configFile);
+                     InputStreamReader reader = new InputStreamReader(fis, StandardCharsets.UTF_8)) {
                     props.load(reader);
                 }
                 System.out.println("Configuration loaded from: " + CONFIG_FILE_PATH);
@@ -82,14 +85,12 @@ public class MiniApp {
     }
 
     private void startServer() {
-        try {
-            ServerSocket serverSocket = new ServerSocket(SERVER_PORT);
+        try (ServerSocket serverSocket = new ServerSocket(SERVER_PORT)) {
             System.out.println("Server started on port: " + SERVER_PORT);
             System.out.println("Server ready to accept connections...");
 
             // Simulate server running
             Thread.sleep(1000);
-            serverSocket.close();
 
         } catch (Exception e) {
             System.err.println("Failed to start server: " + e.getMessage());
