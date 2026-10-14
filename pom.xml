@@ -13,7 +13,21 @@
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <aws.sdk.version>2.25.11</aws.sdk.version>
     </properties>
+
+    <!-- AWS SDK v2 BOM for consistent dependency version management (cr-java-0063) -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>${aws.sdk.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <dependency>
@@ -21,11 +35,83 @@
             <artifactId>mysql-connector-java</artifactId>
             <version>8.0.33</version>
         </dependency>
-        
+
+        <!--
+            HikariCP connection pool (cr-java-0073):
+            Replaces raw JDBC DriverManager.getConnection() calls (source lines 17 and 39)
+            with a managed HikariDataSource. Combined with Amazon RDS Proxy (endpoint
+            injected via RDS_PROXY_ENDPOINT environment variable), this provides efficient
+            connection pooling, automatic failover, and IAM authentication support for
+            cloud database deployments on AWS.
+        -->
+        <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>5.1.0</version>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
             <version>2.7.0</version>
+        </dependency>
+
+        <!--
+            AWS SDK v2 S3 client (cr-java-0063):
+            Replaces all java.io.File-based persistent storage operations with
+            Amazon S3 client calls for cloud-native, durable, and scalable storage.
+            Version is managed by the AWS SDK BOM above.
+        -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+        </dependency>
+
+        <!--
+            AWS SDK v2 Secrets Manager client (cr-java-0069):
+            Replaces hard-coded DB_USERNAME, DB_PASSWORD, and DB_URL constants in
+            DatabaseService with runtime retrieval from AWS Secrets Manager, enabling
+            credential rotation without redeployment and eliminating credentials from
+            source code and container image layers.
+            Version is managed by the AWS SDK BOM above.
+        -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>secretsmanager</artifactId>
+        </dependency>
+
+        <!-- Jackson Databind for parsing the Secrets Manager JSON secret payload -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.15.2</version>
+        </dependency>
+
+        <!--
+            AWS SDK v2 SSM Parameter Store client (cr-java-0077):
+            Enables runtime retrieval of port numbers and other configuration values from
+            AWS Systems Manager Parameter Store, eliminating hard-coded port literals.
+            Values are injected at runtime through ECS task definition environment,
+            EKS pod spec, or Elastic Beanstalk environment properties.
+            Version is managed by the AWS SDK BOM above.
+        -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>ssm</artifactId>
+        </dependency>
+
+        <!--
+            AWS SDK v2 Apache HTTP client (cr-java-0097):
+            Provides ApacheHttpClient with explicit connectionTimeout and socketTimeout
+            configuration for all AWS SDK clients (SecretsManagerClient, S3Client, etc.)
+            to prevent indefinite network hangs in cloud environments with variable
+            latency or service degradation. The Apache HTTP client exposes fine-grained
+            timeout controls not available in the default URL connection HTTP client.
+            Version is managed by the AWS SDK BOM above.
+        -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>apache-client</artifactId>
         </dependency>
     </dependencies>
 
