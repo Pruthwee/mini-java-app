@@ -38,7 +38,7 @@
 
     <build>
         <plugins>
-            <!-- Updated: maven-compiler-plugin 3.13.0 supports --release 25 -->
+            <!-- Updated: maven-compiler-plugin 3.13.0 supports release flag 25 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
