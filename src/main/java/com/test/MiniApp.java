@@ -11,26 +11,34 @@ import java.util.Properties;
  */
 public class MiniApp {
     
-    // BLOCKER: Hardcoded port number
-    private static final int SERVER_PORT = 8080;
+    // cz-java-0061: Server port externalized via SERVER_PORT environment variable
+    private static final int SERVER_PORT = Integer.parseInt(System.getenv().getOrDefault("SERVER_PORT", "8080"));
     
-    // BLOCKER: Hardcoded absolute file path
-    private static final String CONFIG_FILE_PATH = "/opt/app/config/app.properties";
-    private static final String LOG_FILE_PATH = "/var/log/mini-app.log";
+    // Externalized absolute file paths via environment variables (cz-java-0057)
+    private static final String CONFIG_FILE_PATH = System.getenv().getOrDefault("APP_CONFIG_FILE_PATH", "/opt/app/config/app.properties");
+    private static final String LOG_FILE_PATH = System.getenv().getOrDefault("APP_LOG_FILE_PATH", "/var/log/mini-app.log");
     
     public static void main(String[] args) {
         System.out.println("Starting Mini Java Application...");
         
+        // Start health check endpoint (mandatory containerization requirement)
+        HealthCheckServer healthCheckServer = new HealthCheckServer();
+        try {
+            healthCheckServer.start();
+        } catch (IOException e) {
+            System.err.println("Warning: Failed to start health check server: " + e.getMessage());
+        }
+
         MiniApp app = new MiniApp();
         app.initializeApplication();
         app.startServer();
     }
     
     private void initializeApplication() {
-        // BLOCKER: Reading from hardcoded absolute path
+        // Reading configuration from externalized path
         loadConfiguration();
         
-        // BLOCKER: Writing to hardcoded absolute path
+        // Initializing logging from externalized path
         initializeLogging();
         
         // Initialize database connection with hardcoded values
@@ -40,7 +48,7 @@ public class MiniApp {
     
     private void loadConfiguration() {
         try {
-            // BLOCKER: Hardcoded absolute file path
+            // Path resolved from environment variable APP_CONFIG_FILE_PATH (cz-java-0057)
             File configFile = new File(CONFIG_FILE_PATH);
             if (configFile.exists()) {
                 Properties props = new Properties();
@@ -56,8 +64,10 @@ public class MiniApp {
     
     private void initializeLogging() {
         try {
-            // BLOCKER: Hardcoded absolute path for log file
-            File logDir = new File("/var/log");
+            // cz-java-0058: Log directory resolved from APP_LOG_DIRECTORY environment variable
+            // backed by an EKS PersistentVolumeClaim (EFS) mount path instead of a hardcoded local path
+            String logDirectory = System.getenv().getOrDefault("APP_LOG_DIRECTORY", "/mnt/efs/logs/mini-app");
+            File logDir = new File(logDirectory);
             if (!logDir.exists()) {
                 logDir.mkdirs();
             }
@@ -75,7 +85,7 @@ public class MiniApp {
     
     private void startServer() {
         try {
-            // BLOCKER: Hardcoded port number
+            // cz-java-0061: Port resolved from SERVER_PORT environment variable
             ServerSocket serverSocket = new ServerSocket(SERVER_PORT);
             System.out.println("Server started on port: " + SERVER_PORT);
             System.out.println("Server ready to accept connections...");
