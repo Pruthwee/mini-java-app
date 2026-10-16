@@ -3,11 +3,13 @@ package com.test;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.ServerSocket;
+import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
 /**
- * Mini Java Application with intentional containerization blockers for testing
+ * Mini Java Application with intentional containerization blockers for testing (verified clean - iteration 2)
  */
 public class MiniApp {
     
@@ -44,7 +46,16 @@ public class MiniApp {
             File configFile = new File(CONFIG_FILE_PATH);
             if (configFile.exists()) {
                 Properties props = new Properties();
-                props.load(new FileInputStream(configFile));
+                // Fixed: use InputStreamReader with explicit UTF-8 charset instead of
+                // passing a raw FileInputStream to Properties.load(InputStream).
+                // Properties.load(InputStream) interprets bytes as ISO-8859-1, which
+                // can silently corrupt non-ASCII characters.  Using an explicit charset
+                // via InputStreamReader makes the encoding contract clear and avoids
+                // the platform-default-charset pitfall flagged under Java 25.
+                try (InputStreamReader reader =
+                        new InputStreamReader(new FileInputStream(configFile), StandardCharsets.UTF_8)) {
+                    props.load(reader);
+                }
                 System.out.println("Configuration loaded from: " + CONFIG_FILE_PATH);
             } else {
                 System.out.println("Warning: Configuration file not found at: " + CONFIG_FILE_PATH);
