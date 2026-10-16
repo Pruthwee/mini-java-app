@@ -1,0 +1,64 @@
+version: "3.9"
+
+services:
+  mini-java-app:
+    image: mini-java-app:latest
+    container_name: mini-java-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    environment:
+      # Server configuration
+      SERVER_PORT: "8080"
+      HEALTH_CHECK_PORT: "8081"
+
+      # Application paths
+      APP_CONFIG_FILE_PATH: /opt/app/config/app.properties
+      APP_LOG_FILE_PATH: /mnt/efs/logs/mini-app/app.log
+      APP_LOG_DIRECTORY: /mnt/efs/logs/mini-app
+
+      # Database configuration (override with actual values)
+      DB_HOST: ${DB_HOST:-localhost}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME:-mini_app_db}
+      DB_USERNAME: ${DB_USERNAME:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-}
+
+      # Redis cache configuration (override with actual values)
+      REDIS_HOST: ${REDIS_HOST:-localhost}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+
+      # External service configuration (override with actual values)
+      EXTERNAL_API_URL: ${EXTERNAL_API_URL:-http://api.example.com:8080/v1}
+      PAYMENT_SERVICE_URL: ${PAYMENT_SERVICE_URL:-https://payment.internal.company.com/process}
+
+      # JVM options
+      JAVA_OPTS: >-
+        -XX:+UseContainerSupport
+        -XX:MaxRAMPercentage=75.0
+        -Xms256m
+        -Xmx512m
+        -Dfile.encoding=UTF-8
+        -Duser.timezone=UTC
+
+    volumes:
+      - app-config:/opt/app/config
+      - app-logs:/mnt/efs/logs/mini-app
+
+    restart: unless-stopped
+
+    networks:
+      - app-network
+
+volumes:
+  app-config:
+    driver: local
+  app-logs:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge
