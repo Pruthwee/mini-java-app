@@ -1,0 +1,18 @@
+<configuration>
+    <root level="INFO">
+        <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            </encoder>
+        </appender>
+    </root>
+
+    <!-- Prevent AWS SDK from logging secrets, wire data, and request/response data -->
+    <logger name="software.amazon.awssdk" level="WARN"/>
+    <logger name="software.amazon.awssdk.request" level="WARN"/>
+    <logger name="org.apache.http.wire" level="WARN"/>
+    <logger name="org.apache.http.headers" level="WARN"/>
+
+    <!-- HikariCP pool logging at INFO, never DEBUG -->
+    <logger name="com.zaxxer.hikari" level="INFO"/>
+</configuration>
