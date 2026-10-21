@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="STDOUT" />
+    </root>
+
+    <!-- Safe logging: prevent AWS SDK from logging secrets, wire data, and request/response details -->
+    <logger name="software.amazon.awssdk" level="WARN" />
+    <logger name="software.amazon.awssdk.request" level="WARN" />
+    <logger name="org.apache.http.wire" level="WARN" />
+    <logger name="org.apache.http.headers" level="WARN" />
+    <logger name="com.zaxxer.hikari" level="INFO" />
+</configuration>
