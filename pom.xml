@@ -15,6 +15,18 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>2.57.3</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <dependency>
             <groupId>mysql</groupId>
@@ -26,6 +38,52 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
             <version>2.7.0</version>
+        </dependency>
+
+        <!-- AWS SDK v2 - S3 for object storage (cr-java-0061, cr-java-0063, cr-java-0070) -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+        </dependency>
+
+        <!-- AWS SDK v2 - Secrets Manager for secret retrieval (cr-java-0069, cr-java-0113) -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>secretsmanager</artifactId>
+        </dependency>
+
+        <!-- AWS SDK v2 - SSM for configuration (cr-java-0077) -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>ssm</artifactId>
+        </dependency>
+
+        <!-- Jackson for parsing Secrets Manager JSON (cr-java-0069, cr-java-0113) -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.22.4</version>
+        </dependency>
+
+        <!-- HikariCP connection pool (cr-java-0073) -->
+        <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>5.1.0</version>
+        </dependency>
+
+        <!-- SLF4J API for logging (safe logging configuration) -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.36</version>
+        </dependency>
+
+        <!-- Logback for logging (safe logging configuration) -->
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.2.12</version>
         </dependency>
     </dependencies>
 
