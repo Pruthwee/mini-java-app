@@ -1,0 +1,112 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mini-java-app
+  namespace: mini-java-app
+  labels:
+    app: mini-java-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mini-java-app
+  template:
+    metadata:
+      labels:
+        app: mini-java-app
+    spec:
+      containers:
+        - name: mini-java-app
+          image: "{{IMAGE_URI}}"
+          ports:
+            - containerPort: 8080
+              name: http
+            - containerPort: 8081
+              name: health
+          env:
+            - name: APP_PORT
+              value: "8080"
+            - name: HEALTH_PORT
+              value: "8081"
+            - name: CONFIG_PATH
+              value: "{{CONFIG_PATH}}"
+            - name: LOG_PATH
+              value: "{{LOG_PATH}}"
+            - name: LOG_DIR
+              value: "{{LOG_DIR}}"
+            - name: DB_HOST
+              value: "{{DB_HOST}}"
+            - name: DB_PORT
+              value: "{{DB_PORT}}"
+            - name: DB_NAME
+              value: "{{DB_NAME}}"
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mini-java-app-secrets
+                  key: DB_USERNAME
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mini-java-app-secrets
+                  key: DB_PASSWORD
+            - name: REDIS_HOST
+              value: "{{REDIS_HOST}}"
+            - name: REDIS_PORT
+              value: "{{REDIS_PORT}}"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mini-java-app-secrets
+                  key: REDIS_PASSWORD
+            - name: EXTERNAL_API_URL
+              value: "{{EXTERNAL_API_URL}}"
+            - name: EXTERNAL_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: mini-java-app-secrets
+                  key: EXTERNAL_API_KEY
+            - name: PAYMENT_SERVICE_URL
+              value: "{{PAYMENT_SERVICE_URL}}"
+            - name: PAYMENT_SERVICE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mini-java-app-secrets
+                  key: PAYMENT_SERVICE_USERNAME
+            - name: PAYMENT_SERVICE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mini-java-app-secrets
+                  key: PAYMENT_SERVICE_PASSWORD
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8081
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8081
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+      volumes:
+        - name: config-volume
+          emptyDir: {}
+        - name: logs-volume
+          emptyDir: {}
+        - name: temp-volume
+          emptyDir: {}
+        - name: uploads-volume
+          emptyDir: {}

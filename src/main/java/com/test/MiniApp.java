@@ -11,19 +11,32 @@ import java.util.Properties;
  */
 public class MiniApp {
     
-    // BLOCKER: Hardcoded port number
-    private static final int SERVER_PORT = 8080;
+    // Port read from environment variable APP_PORT with fallback default
+    private static final int SERVER_PORT = Integer.parseInt(System.getenv().getOrDefault("APP_PORT", "8080"));
     
-    // BLOCKER: Hardcoded absolute file path
-    private static final String CONFIG_FILE_PATH = "/opt/app/config/app.properties";
-    private static final String LOG_FILE_PATH = "/var/log/mini-app.log";
+    // Paths read from environment variables with fallback defaults
+    private static final String CONFIG_FILE_PATH = System.getenv().getOrDefault("CONFIG_PATH", "/app/config/app.properties");
+    private static final String LOG_FILE_PATH = System.getenv().getOrDefault("LOG_PATH", "/app/logs/mini-app.log");
     
     public static void main(String[] args) {
         System.out.println("Starting Mini Java Application...");
         
         MiniApp app = new MiniApp();
         app.initializeApplication();
+        
+        // Start health check endpoint so the process stays alive for container probes
+        HealthCheckServer healthServer = new HealthCheckServer();
+        healthServer.start();
+        
         app.startServer();
+        
+        // Keep the process running so the health endpoint stays available
+        try {
+            Thread.currentThread().join();
+        } catch (InterruptedException e) {
+            System.err.println("Application interrupted: " + e.getMessage());
+            healthServer.stop();
+        }
     }
     
     private void initializeApplication() {
@@ -56,8 +69,9 @@ public class MiniApp {
     
     private void initializeLogging() {
         try {
-            // BLOCKER: Hardcoded absolute path for log file
-            File logDir = new File("/var/log");
+            // Log directory read from environment variable LOG_DIR with fallback default
+            String logDirPath = System.getenv().getOrDefault("LOG_DIR", "/app/logs");
+            File logDir = new File(logDirPath);
             if (!logDir.exists()) {
                 logDir.mkdirs();
             }
@@ -75,7 +89,7 @@ public class MiniApp {
     
     private void startServer() {
         try {
-            // BLOCKER: Hardcoded port number
+            // Port read from environment variable APP_PORT (see SERVER_PORT field)
             ServerSocket serverSocket = new ServerSocket(SERVER_PORT);
             System.out.println("Server started on port: " + SERVER_PORT);
             System.out.println("Server ready to accept connections...");
