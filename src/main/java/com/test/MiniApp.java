@@ -12,14 +12,21 @@ import java.util.Properties;
 public class MiniApp {
     
     // BLOCKER: Hardcoded port number
-    private static final int SERVER_PORT = 8080;
+    private static final int SERVER_PORT = Integer.parseInt(System.getenv().getOrDefault("APP_PORT", "8080"));
     
     // BLOCKER: Hardcoded absolute file path
-    private static final String CONFIG_FILE_PATH = "/opt/app/config/app.properties";
-    private static final String LOG_FILE_PATH = "/var/log/mini-app.log";
+    private static final String DATA_DIR = System.getenv().getOrDefault("DATA_PATH", "/app/data");
+    private static final String CONFIG_FILE_PATH = System.getenv().getOrDefault("CONFIG_PATH", "/app/config") + "/app.properties";
+    private static final String LOG_FILE_PATH = DATA_DIR + "/mini-app.log";
     
     public static void main(String[] args) {
         System.out.println("Starting Mini Java Application...");
+        
+        try {
+            HealthServer.start();
+        } catch (IOException e) {
+            System.err.println("Failed to start health endpoint: " + e.getMessage());
+        }
         
         MiniApp app = new MiniApp();
         app.initializeApplication();
@@ -57,7 +64,7 @@ public class MiniApp {
     private void initializeLogging() {
         try {
             // BLOCKER: Hardcoded absolute path for log file
-            File logDir = new File("/var/log");
+            File logDir = new File(DATA_DIR);
             if (!logDir.exists()) {
                 logDir.mkdirs();
             }

@@ -1,0 +1,66 @@
+{
+  "family": "mini-java-app-task",
+  "requiresCompatibilities": ["FARGATE"],
+  "networkMode": "awsvpc",
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::{{ACCOUNT_ID}}:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::{{ACCOUNT_ID}}:role/ecsTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "mini-java-app",
+      "image": "{{IMAGE_URI}}",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "protocol": "tcp"
+        },
+        {
+          "containerPort": 8081,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        { "name": "HEALTH_PORT", "value": "8081" },
+        { "name": "DATA_PATH", "value": "/app/data" },
+        { "name": "CONFIG_PATH", "value": "/app/config" },
+        { "name": "REDIS_HOST", "value": "redis" },
+        { "name": "TZ", "value": "UTC" }
+      ],
+      "secrets": [
+        { "name": "APP_PORT", "valueFrom": "{{APP_PORT_SECRET_ARN}}" },
+        { "name": "REDIS_PORT", "valueFrom": "{{REDIS_PORT_SECRET_ARN}}" }
+      ],
+      "mountPoints": [
+        {
+          "sourceVolume": "efs-data",
+          "containerPath": "/app/data",
+          "readOnly": false
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/mini-java-app",
+          "awslogs-region": "{{AWS_REGION}}",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ],
+  "volumes": [
+    {
+      "name": "efs-data",
+      "efsVolumeConfiguration": {
+        "fileSystemId": "{{EFS_FILE_SYSTEM_ID}}",
+        "rootDirectory": "/",
+        "transitEncryption": "ENABLED",
+        "authorizationConfig": {
+          "accessPointId": "{{EFS_ACCESS_POINT_ID}}",
+          "iam": "ENABLED"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "serviceName": "mini-java-app-service",
+  "cluster": "{{CLUSTER_NAME}}",
+  "taskDefinition": "mini-java-app-task",
+  "desiredCount": 2,
+  "launchType": "FARGATE",
+  "platformVersion": "LATEST",
+  "networkConfiguration": {
+    "awsvpcConfiguration": {
+      "subnets": ["{{SUBNET_1}}", "{{SUBNET_2}}"],
+      "securityGroups": ["{{SECURITY_GROUP}}"],
+      "assignPublicIp": "ENABLED"
+    }
+  },
+  "deploymentConfiguration": {
+    "maximumPercent": 200,
+    "minimumHealthyPercent": 50
+  },
+  "loadBalancers": [
+    {
+      "targetGroupArn": "{{TARGET_GROUP_ARN}}",
+      "containerName": "mini-java-app",
+      "containerPort": 8081
+    }
+  ],
+  "enableECSManagedTags": true,
+  "propagateTags": "SERVICE",
+  "tags": [
+    { "key": "application", "value": "mini-java-app" }
+  ]
+}

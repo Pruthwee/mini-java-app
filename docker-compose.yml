@@ -1,0 +1,24 @@
+services:
+  mini-java-app:
+    image: mini-java-app:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    environment:
+      APP_PORT: "8080"
+      HEALTH_PORT: "8081"
+      DATA_PATH: /app/data
+      CONFIG_PATH: /app/config
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: "6379"
+      TZ: UTC
+    volumes:
+      - app-data:/app/data
+      - ./config:/app/config:ro
+    restart: unless-stopped
+
+volumes:
+  app-data:
