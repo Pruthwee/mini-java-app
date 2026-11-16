@@ -1,0 +1,115 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minijava-br55-con-1612
+  namespace: minijava-br55-con-1612
+  labels:
+    app: minijava-br55-con-1612
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: minijava-br55-con-1612
+  template:
+    metadata:
+      labels:
+        app: minijava-br55-con-1612
+    spec:
+      containers:
+        - name: minijava-br55-con-1612
+          image: "{{IMAGE_URI}}"
+          imagePullPolicy: Always
+          ports:
+            - name: app
+              containerPort: 8080
+              protocol: TCP
+            - name: health
+              containerPort: 8081
+              protocol: TCP
+          env:
+            - name: APP_PORT
+              value: "8080"
+            - name: HEALTH_PORT
+              value: "8081"
+            - name: CONFIG_PATH
+              value: "/app/config"
+            - name: LOG_PATH
+              value: "/app/logs"
+            - name: REDIS_HOST
+              value: "{{REDIS_HOST}}"
+            - name: REDIS_PORT
+              value: "{{REDIS_PORT}}"
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minijava-br55-con-1612-secrets
+                  key: DB_PASSWORD
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minijava-br55-con-1612-secrets
+                  key: REDIS_PASSWORD
+            - name: EXTERNAL_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: minijava-br55-con-1612-secrets
+                  key: EXTERNAL_API_KEY
+            - name: PAYMENT_SERVICE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minijava-br55-con-1612-secrets
+                  key: PAYMENT_SERVICE_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: minijava-br55-con-1612-secrets
+                  key: JWT_SECRET
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minijava-br55-con-1612-secrets
+                  key: ADMIN_PASSWORD
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: minijava-br55-con-1612-secrets
+                  key: ENCRYPTION_KEY
+            - name: MONITORING_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minijava-br55-con-1612-secrets
+                  key: MONITORING_PASSWORD
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minijava-br55-con-1612-secrets
+                  key: RABBITMQ_PASSWORD
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8081
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8081
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          volumeMounts:
+            - name: logs
+              mountPath: /app/logs
+      volumes:
+        - name: logs
+          emptyDir: {}
