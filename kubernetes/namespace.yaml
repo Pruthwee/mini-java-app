@@ -1,0 +1,6 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: minijava-bach-con-1439
+  labels:
+    name: minijava-bach-con-1439

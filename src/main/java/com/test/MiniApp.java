@@ -11,12 +11,13 @@ import java.util.Properties;
  */
 public class MiniApp {
     
-    // BLOCKER: Hardcoded port number
-    private static final int SERVER_PORT = 8080;
+    // Port read from environment variable (cz-java-0061)
+    private static final int SERVER_PORT = Integer.parseInt(System.getenv().getOrDefault("APP_PORT", "8080"));
     
-    // BLOCKER: Hardcoded absolute file path
-    private static final String CONFIG_FILE_PATH = "/opt/app/config/app.properties";
-    private static final String LOG_FILE_PATH = "/var/log/mini-app.log";
+    // Paths read from environment variables (cz-java-0057, cz-java-0058)
+    private static final String CONFIG_FILE_PATH = System.getenv().getOrDefault("CONFIG_PATH", "/app/config/app.properties");
+    private static final String LOG_FILE_PATH = System.getenv().getOrDefault("LOG_PATH", "/app/logs/mini-app.log");
+    private static final String LOG_DIR_PATH = System.getenv().getOrDefault("LOG_DIR", "/app/logs");
     
     public static void main(String[] args) {
         System.out.println("Starting Mini Java Application...");
@@ -24,6 +25,11 @@ public class MiniApp {
         MiniApp app = new MiniApp();
         app.initializeApplication();
         app.startServer();
+        
+        // Start health check server to keep the process running
+        // The application's own work ends after start-up; the health server keeps the process alive
+        HealthCheckServer healthServer = new HealthCheckServer();
+        healthServer.start();
     }
     
     private void initializeApplication() {
@@ -56,8 +62,8 @@ public class MiniApp {
     
     private void initializeLogging() {
         try {
-            // BLOCKER: Hardcoded absolute path for log file
-            File logDir = new File("/var/log");
+            // Log directory read from environment variable (cz-java-0057, cz-java-0058)
+            File logDir = new File(LOG_DIR_PATH);
             if (!logDir.exists()) {
                 logDir.mkdirs();
             }

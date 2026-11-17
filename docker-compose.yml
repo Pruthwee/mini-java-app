@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  minijava-bach-con-1439:
+    image: minijava-bach-con-1439:latest
+    container_name: minijava-bach-con-1439
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    environment:
+      - APP_PORT=8080
+      - HEALTH_PORT=8081
+      - CONFIG_PATH=/app/config/app.properties
+      - LOG_PATH=/app/logs/mini-app.log
+      - LOG_DIR=/app/logs
+      - DB_HOST=${DB_HOST:?set DB_HOST}
+      - DB_PORT=${DB_PORT:?set DB_PORT}
+      - DB_NAME=${DB_NAME:?set DB_NAME}
+      - DB_USERNAME=${DB_USERNAME:?set DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD:?set DB_PASSWORD}
+      - REDIS_HOST=${REDIS_HOST:?set REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT:?set REDIS_PORT}
+      - JAVA_OPTS=-Xmx512m -Xms256m -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
+    volumes:
+      - ./config:/app/config:ro
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
+    restart: unless-stopped
