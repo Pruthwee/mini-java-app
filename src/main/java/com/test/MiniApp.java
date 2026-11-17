@@ -3,8 +3,13 @@ package com.test;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.nio.charset.StandardCharsets;
 import java.util.Properties;
+
+import com.sun.net.httpserver.HttpServer;
 
 /**
  * Mini Java Application with intentional containerization blockers for testing
@@ -12,14 +17,20 @@ import java.util.Properties;
 public class MiniApp {
     
     // BLOCKER: Hardcoded port number
-    private static final int SERVER_PORT = 8080;
+    private static final int SERVER_PORT = Integer.parseInt(System.getenv().getOrDefault("APP_PORT", "8080"));
     
     // BLOCKER: Hardcoded absolute file path
-    private static final String CONFIG_FILE_PATH = "/opt/app/config/app.properties";
-    private static final String LOG_FILE_PATH = "/var/log/mini-app.log";
+    private static final String CONFIG_FILE_PATH = System.getenv().getOrDefault("CONFIG_PATH", "/opt/app/config/app.properties");
+    private static final String LOG_DIR_PATH = System.getenv().getOrDefault("FILE_STORAGE_PATH", "/var/log");
+    private static final String LOG_FILE_PATH = System.getenv().getOrDefault("LOG_PATH", LOG_DIR_PATH + "/mini-app.log");
+    
+    // Health check endpoint port (separate from SERVER_PORT)
+    private static final int HEALTH_PORT = Integer.parseInt(System.getenv().getOrDefault("HEALTH_PORT", "8081"));
     
     public static void main(String[] args) {
         System.out.println("Starting Mini Java Application...");
+        
+        startHealthServer();
         
         MiniApp app = new MiniApp();
         app.initializeApplication();
@@ -36,6 +47,26 @@ public class MiniApp {
         // Initialize database connection with hardcoded values
         DatabaseService dbService = new DatabaseService();
         dbService.connect();
+    }
+    
+    // Health check endpoint: GET /health answers {"status":"UP"} for as long as the process runs.
+    // Its server thread keeps the process alive after the application's own work has ended.
+    private static void startHealthServer() {
+        try {
+            HttpServer server = HttpServer.create(new InetSocketAddress(HEALTH_PORT), 0);
+            server.createContext("/health", exchange -> {
+                byte[] body = "{\"status\":\"UP\"}".getBytes(StandardCharsets.UTF_8);
+                exchange.getResponseHeaders().set("Content-Type", "application/json");
+                exchange.sendResponseHeaders(200, body.length);
+                try (OutputStream os = exchange.getResponseBody()) {
+                    os.write(body);
+                }
+            });
+            server.start();
+            System.out.println("Health endpoint started on port: " + HEALTH_PORT + " (/health)");
+        } catch (IOException e) {
+            System.err.println("Failed to start health endpoint: " + e.getMessage());
+        }
     }
     
     private void loadConfiguration() {
@@ -57,7 +88,7 @@ public class MiniApp {
     private void initializeLogging() {
         try {
             // BLOCKER: Hardcoded absolute path for log file
-            File logDir = new File("/var/log");
+            File logDir = new File(LOG_DIR_PATH);
             if (!logDir.exists()) {
                 logDir.mkdirs();
             }

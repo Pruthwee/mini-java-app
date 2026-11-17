@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: minijava-s55-con-1433-service
+  namespace: minijava-s55-con-1433
+  labels:
+    app: minijava-s55-con-1433
+spec:
+  type: ClusterIP
+  selector:
+    app: minijava-s55-con-1433
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8080

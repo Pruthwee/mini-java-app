@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: minijava-s55-con-1433-ingress
+  namespace: minijava-s55-con-1433
+  labels:
+    app: minijava-s55-con-1433
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/healthcheck-port: "8081"
+spec:
+  rules:
+    - host: minijava-s55-con-1433.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: minijava-s55-con-1433-service
+                port:
+                  number: 80

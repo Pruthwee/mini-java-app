@@ -1,0 +1,34 @@
+services:
+  minijava-s55-con-1433:
+    image: minijava-s55-con-1433:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    environment:
+      APP_PORT: "8080"
+      HEALTH_PORT: "8081"
+      CONFIG_PATH: /app/config/app.properties
+      FILE_STORAGE_PATH: /app/logs
+      LOG_PATH: /app/logs/mini-app.log
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      TZ: UTC
+      REDIS_HOST: ${REDIS_HOST:?set REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD}
+      EXTERNAL_API_KEY: ${EXTERNAL_API_KEY:?set EXTERNAL_API_KEY}
+      PAYMENT_SERVICE_PASSWORD: ${PAYMENT_SERVICE_PASSWORD:?set PAYMENT_SERVICE_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?set ENCRYPTION_KEY}
+      MONITORING_PASSWORD: ${MONITORING_PASSWORD:?set MONITORING_PASSWORD}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD}
+    volumes:
+      - ./config:/app/config:ro
+      - app-logs:/app/logs
+
+volumes:
+  app-logs:

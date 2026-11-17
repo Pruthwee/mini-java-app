@@ -1,0 +1,119 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minijava-s55-con-1433
+  namespace: minijava-s55-con-1433
+  labels:
+    app: minijava-s55-con-1433
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: minijava-s55-con-1433
+  template:
+    metadata:
+      labels:
+        app: minijava-s55-con-1433
+    spec:
+      containers:
+        - name: minijava-s55-con-1433
+          image: "{{IMAGE_URI}}"
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: health
+              containerPort: 8081
+              protocol: TCP
+          env:
+            - name: APP_PORT
+              value: "8080"
+            - name: HEALTH_PORT
+              value: "8081"
+            - name: CONFIG_PATH
+              value: "/app/config/app.properties"
+            - name: FILE_STORAGE_PATH
+              value: "/app/logs"
+            - name: LOG_PATH
+              value: "/app/logs/mini-app.log"
+            - name: SPRING_PROFILES_ACTIVE
+              value: "prod"
+            - name: REDIS_HOST
+              value: "{{REDIS_HOST}}"
+            - name: REDIS_PORT
+              value: "{{REDIS_PORT}}"
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minijava-s55-con-1433-secrets
+                  key: DB_PASSWORD
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minijava-s55-con-1433-secrets
+                  key: REDIS_PASSWORD
+            - name: EXTERNAL_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: minijava-s55-con-1433-secrets
+                  key: EXTERNAL_API_KEY
+            - name: PAYMENT_SERVICE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minijava-s55-con-1433-secrets
+                  key: PAYMENT_SERVICE_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: minijava-s55-con-1433-secrets
+                  key: JWT_SECRET
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minijava-s55-con-1433-secrets
+                  key: ADMIN_PASSWORD
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: minijava-s55-con-1433-secrets
+                  key: ENCRYPTION_KEY
+            - name: MONITORING_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minijava-s55-con-1433-secrets
+                  key: MONITORING_PASSWORD
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minijava-s55-con-1433-secrets
+                  key: RABBITMQ_PASSWORD
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+          volumeMounts:
+            - name: app-logs
+              mountPath: /app/logs
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8081
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8081
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+      volumes:
+        - name: app-logs
+          emptyDir: {}

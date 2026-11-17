@@ -16,11 +16,11 @@ public class DatabaseService {
     private static final String DB_NAME = "mini_app_db";
     private static final String DB_URL = "jdbc:mysql://" + DB_HOST + ":" + DB_PORT + "/" + DB_NAME;
     private static final String DB_USERNAME = "root";
-    private static final String DB_PASSWORD = "password123";
+    private static final String DB_PASSWORD = System.getenv("DB_PASSWORD");
     
     // BLOCKER: Hardcoded cache server details
-    private static final String REDIS_HOST = "127.0.0.1";
-    private static final int REDIS_PORT = 6379;
+    private static final String REDIS_HOST = System.getenv().getOrDefault("REDIS_HOST", "localhost");
+    private static final int REDIS_PORT = Integer.parseInt(System.getenv().getOrDefault("REDIS_PORT", "6379"));
     
     // BLOCKER: Hardcoded API endpoints
     private static final String EXTERNAL_API_URL = "http://api.example.com:8080/v1";
